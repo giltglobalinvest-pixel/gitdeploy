@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
-<title>GitDeploy v1.1</title>
+<title>GitDeploy v1.3</title>
 <link href="https://fonts.googleapis.com/css2?family=DM+Mono:wght@400;500&family=Bricolage+Grotesque:wght@400;600;700;800&display=swap" rel="stylesheet">
 <style>
 :root {
@@ -539,7 +539,7 @@ body::after {
   <div class="logo">
     <button onclick="toggleMobileSidebar()" class="mobile-menu-btn" style="display:none;background:var(--surface2);border:1px solid var(--border2);color:var(--text);border-radius:8px;padding:6px 10px;font-size:16px;cursor:pointer;margin-right:8px;">☰</button>
     <div class="logo-mark">🚀</div>
-    <div class="logo-name">Git<span>Deploy</span> <span style="font-size:9px;color:var(--text3);font-family:var(--mono);">v1.1</span></div>
+    <div class="logo-name">Git<span>Deploy</span> <span style="font-size:9px;color:var(--text3);font-family:var(--mono);">v1.3</span></div>
   </div>
   <div class="token-status">
     <div class="token-dot" id="sheetsStatusDot" style="background:var(--text3);"></div>
@@ -1302,14 +1302,13 @@ function showToast(msg) {
   });
 });
 
-// Pre-fill token from memory - runs BEFORE init
+// Token is entered by user via settings - never hardcoded
 (function() {
   const cfg = JSON.parse(localStorage.getItem('gitdeploy_config') || '{}');
-  if (!cfg.token) {
-    localStorage.setItem('gitdeploy_config', JSON.stringify({
-      token: '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',
-      username: 'giltglobalinvest-pixel',
-    }));
+  if (!cfg.username) {
+    // Only pre-fill username, never token
+    cfg.username = 'giltglobalinvest-pixel';
+    localStorage.setItem('gitdeploy_config', JSON.stringify(cfg));
   }
 })();
 
