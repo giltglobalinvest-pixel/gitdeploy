@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
-<title>GitDeploy v1.4</title>
+<title>GitDeploy v1.5</title>
 <link href="https://fonts.googleapis.com/css2?family=DM+Mono:wght@400;500&family=Bricolage+Grotesque:wght@400;600;700;800&display=swap" rel="stylesheet">
 <style>
 :root {
@@ -539,7 +539,7 @@ body::after {
   <div class="logo">
     <button onclick="toggleMobileSidebar()" class="mobile-menu-btn" style="display:none;background:var(--surface2);border:1px solid var(--border2);color:var(--text);border-radius:8px;padding:6px 10px;font-size:16px;cursor:pointer;margin-right:8px;">☰</button>
     <div class="logo-mark">🚀</div>
-    <div class="logo-name">Git<span>Deploy</span> <span style="font-size:9px;color:var(--text3);font-family:var(--mono);">v1.4</span></div>
+    <div class="logo-name">Git<span>Deploy</span> <span style="font-size:9px;color:var(--text3);font-family:var(--mono);">v1.5</span></div>
   </div>
   <div class="token-status">
     <div class="token-dot" id="sheetsStatusDot" style="background:var(--text3);"></div>
@@ -610,6 +610,18 @@ body::after {
       </div>
       <div id="sheetsTestResult" style="display:none;margin-top:8px;font-size:11px;font-family:var(--mono);padding:8px;border-radius:8px;"></div>
       <button onclick="testSheetsConnection()" style="width:100%;margin-top:8px;padding:8px;border-radius:8px;border:1px solid var(--border2);background:var(--surface3);color:var(--text2);font-family:var(--mono);font-size:11px;cursor:pointer;">🔌 Verbindung testen</button>
+    </div>
+
+    <!-- Apps Script -->
+    <div style="background:var(--surface2);border:1px solid var(--border);border-radius:12px;padding:14px;margin-bottom:14px;">
+      <div style="font-size:9px;font-family:var(--mono);color:var(--text3);text-transform:uppercase;letter-spacing:1px;margin-bottom:12px;">⚡ Google Apps Script (Schreibzugriff)</div>
+      <div class="field">
+        <label class="field-label">Apps Script URL</label>
+        <input class="field-input" type="text" id="appsScriptInput" placeholder="https://script.google.com/macros/s/...">
+        <div style="font-size:9px;color:var(--text3);font-family:var(--mono);margin-top:4px;">Einmalig einrichten → danach automatisches Speichern in Sheets</div>
+      </div>
+      <div id="appsScriptTestResult" style="display:none;margin-top:8px;font-size:11px;font-family:var(--mono);padding:8px;border-radius:8px;"></div>
+      <button onclick="testAppsScript()" style="width:100%;margin-top:8px;padding:8px;border-radius:8px;border:1px solid var(--border2);background:var(--surface3);color:var(--text2);font-family:var(--mono);font-size:11px;cursor:pointer;">🔌 Apps Script testen</button>
     </div>
 
     <div class="modal-actions">
@@ -697,6 +709,40 @@ function getSheetsConfig() {
   };
 }
 
+
+
+async function testAppsScript() {
+  const url = document.getElementById('appsScriptInput').value.trim();
+  const result = document.getElementById('appsScriptTestResult');
+  if (!url) {
+    result.style.display='block';
+    result.style.background='rgba(255,82,82,0.1)';
+    result.style.color='var(--red)';
+    result.textContent='⚠ Bitte URL eingeben';
+    return;
+  }
+  result.style.display='block';
+  result.style.background='rgba(68,138,255,0.1)';
+  result.style.color='var(--blue)';
+  result.textContent='🔄 Teste Verbindung...';
+  try {
+    const res = await fetch(url);
+    const data = await res.json();
+    if (data.ok) {
+      result.style.background='rgba(0,230,118,0.1)';
+      result.style.color='var(--green)';
+      result.textContent='✅ Apps Script aktiv!';
+    } else {
+      result.style.background='rgba(255,82,82,0.1)';
+      result.style.color='var(--red)';
+      result.textContent='❌ ' + (data.error||'Fehler');
+    }
+  } catch(e) {
+    result.style.background='rgba(255,82,82,0.1)';
+    result.style.color='var(--red)';
+    result.textContent='❌ Verbindung fehlgeschlagen';
+  }
+}
 
 async function testSheetsConnection() {
   const key = document.getElementById('gSheetsKeyInput').value.trim();
@@ -798,27 +844,43 @@ async function loadFromSheets() {
 }
 
 async function saveToSheets(project) {
-  // Save via Apps Script if configured, otherwise show hint
   const cfg = getConfig();
   if (!cfg.appsScriptUrl) {
-    showToast('💡 Apps Script URL fehlt – Keys nur lokal gespeichert');
+    showToast('💡 Apps Script URL in Einstellungen eintragen');
     return;
   }
   try {
-    await fetch(cfg.appsScriptUrl, {
+    const res = await fetch(cfg.appsScriptUrl, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
         action: 'saveProject',
+        sheetId: cfg.gSheetsId,
         project: {
           id: project.id, name: project.name,
           repo: project.repo, desc: project.desc||'',
           icon: project.icon||'🚀', created: project.created||''
         },
-        keys: project.keys || {}
       })
     });
-  } catch(e) { console.error('Sheets save error:', e); }
+    // Save keys separately
+    if (project.keys && Object.keys(project.keys).length > 0) {
+      await fetch(cfg.appsScriptUrl, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          action: 'saveKeys',
+          sheetId: cfg.gSheetsId,
+          projectId: project.id,
+          keys: project.keys
+        })
+      });
+    }
+    setSheetsStatus('ok');
+  } catch(e) {
+    console.error('Sheets save error:', e);
+    setSheetsStatus('error');
+  }
 }
 
 function setSheetsStatus(state) {
@@ -917,6 +979,7 @@ function openTokenModal() {
   document.getElementById('gSheetsKeyInput').value = cfg.gSheetsKey || '';
   document.getElementById('gSheetsIdInput').value = cfg.gSheetsId || '';
   document.getElementById('gDriveIdInput').value = cfg.gDriveId || '';
+  document.getElementById('appsScriptInput').value = cfg.appsScriptUrl || '';
   document.getElementById('tokenOverlay').classList.add('open');
 }
 
@@ -931,6 +994,7 @@ function saveToken() {
   cfg.gSheetsKey = document.getElementById('gSheetsKeyInput').value.trim();
   cfg.gSheetsId = document.getElementById('gSheetsIdInput').value.trim();
   cfg.gDriveId = document.getElementById('gDriveIdInput').value.trim();
+  cfg.appsScriptUrl = document.getElementById('appsScriptInput').value.trim();
   saveConfig(cfg);
   updateTokenStatus();
   closeTokenModal();
