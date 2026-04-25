@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
-<title>GitDeploy v1.8</title>
+<title>GitDeploy v1.9</title>
 <link href="https://fonts.googleapis.com/css2?family=DM+Mono:wght@400;500&family=Bricolage+Grotesque:wght@400;600;700;800&display=swap" rel="stylesheet">
 <style>
 :root {
@@ -528,6 +528,142 @@ body::after {
   .overlay { align-items:center; }
   .modal { border-radius:20px; margin:20px; }
 }
+
+/* ── USER MANAGEMENT ── */
+.users-box {
+  border:1px solid var(--border);
+  border-radius:16px;
+  overflow:hidden;
+  margin-top:16px;
+}
+.users-header {
+  background:var(--surface);
+  padding:14px 18px;
+  border-bottom:1px solid var(--border);
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+}
+.users-title {
+  font-size:11px;
+  font-family:var(--mono);
+  color:var(--text2);
+  text-transform:uppercase;
+  letter-spacing:1px;
+}
+.add-user-btn {
+  padding:4px 12px;
+  border-radius:6px;
+  border:1px solid var(--green);
+  background:rgba(0,230,118,0.08);
+  color:var(--green);
+  font-family:var(--mono);
+  font-size:10px;
+  cursor:pointer;
+  transition:all 0.15s;
+}
+.add-user-btn:hover { background:rgba(0,230,118,0.15); }
+
+.user-row {
+  display:flex;
+  align-items:center;
+  gap:10px;
+  padding:12px 18px;
+  border-bottom:1px solid var(--border);
+  transition:background 0.1s;
+}
+.user-row:last-child { border-bottom:none; }
+.user-row:hover { background:var(--surface); }
+
+.user-key {
+  font-family:var(--mono);
+  font-size:12px;
+  font-weight:700;
+  color:var(--green);
+  min-width:100px;
+  flex-shrink:0;
+}
+.user-info { flex:1; min-width:0; }
+.user-name { font-size:13px; font-weight:600; color:var(--text); }
+.user-role {
+  font-size:9px;
+  font-family:var(--mono);
+  color:var(--text3);
+  text-transform:uppercase;
+  letter-spacing:0.5px;
+}
+.user-status {
+  font-size:9px;
+  font-family:var(--mono);
+  font-weight:700;
+  padding:2px 8px;
+  border-radius:10px;
+  flex-shrink:0;
+}
+.user-status.aktiv { background:rgba(0,230,118,0.1); color:var(--green); border:1px solid rgba(0,230,118,0.2); }
+.user-status.inaktiv { background:rgba(90,90,90,0.15); color:var(--text3); border:1px solid var(--border2); }
+
+.user-actions { display:flex; gap:4px; flex-shrink:0; }
+.user-btn {
+  padding:4px 8px;
+  border-radius:6px;
+  border:1px solid var(--border2);
+  background:var(--surface3);
+  color:var(--text2);
+  font-size:10px;
+  font-family:var(--mono);
+  cursor:pointer;
+  transition:all 0.15s;
+}
+.user-btn:hover { border-color:var(--blue); color:var(--blue); }
+.user-btn.danger:hover { border-color:var(--red); color:var(--red); }
+.user-btn.toggle:hover { border-color:var(--yellow); color:var(--yellow); }
+
+.empty-users {
+  padding:24px;
+  text-align:center;
+  font-size:11px;
+  font-family:var(--mono);
+  color:var(--text3);
+}
+
+/* Add user form */
+.add-user-form {
+  display:none;
+  padding:14px 18px;
+  border-bottom:1px solid var(--border);
+  background:var(--surface2);
+}
+.add-user-form.open { display:block; }
+.add-user-grid {
+  display:grid;
+  grid-template-columns:1fr 1fr 1fr;
+  gap:8px;
+  margin-bottom:10px;
+}
+.add-user-actions { display:flex; gap:8px; }
+.user-save-btn {
+  padding:8px 16px;
+  border-radius:8px;
+  border:none;
+  background:var(--green);
+  color:#0d0d0d;
+  font-family:var(--sans);
+  font-size:12px;
+  font-weight:700;
+  cursor:pointer;
+}
+.user-cancel-btn {
+  padding:8px 16px;
+  border-radius:8px;
+  border:1px solid var(--border2);
+  background:transparent;
+  color:var(--text2);
+  font-family:var(--sans);
+  font-size:12px;
+  cursor:pointer;
+}
+
 ::-webkit-scrollbar { width:4px; }
 ::-webkit-scrollbar-track { background:transparent; }
 ::-webkit-scrollbar-thumb { background:var(--border2); border-radius:2px; }
@@ -539,7 +675,7 @@ body::after {
   <div class="logo">
     <button onclick="toggleMobileSidebar()" class="mobile-menu-btn" style="display:none;background:var(--surface2);border:1px solid var(--border2);color:var(--text);border-radius:8px;padding:6px 10px;font-size:16px;cursor:pointer;margin-right:8px;">☰</button>
     <div class="logo-mark">🚀</div>
-    <div class="logo-name">Git<span>Deploy</span> <span style="font-size:9px;color:var(--text3);font-family:var(--mono);">v1.8</span></div>
+    <div class="logo-name">Git<span>Deploy</span> <span style="font-size:9px;color:var(--text3);font-family:var(--mono);">v1.9</span></div>
   </div>
   <div class="token-status">
     <div class="token-dot" id="sheetsStatusDot" style="background:var(--text3);"></div>
@@ -1190,6 +1326,42 @@ function renderMain() {
     <div class="versions-box">
       <div class="versions-header">// Versionsarchiv (${project.versions?.length || 0})</div>
       ${renderVersionHistory(project)}
+    </div>
+
+    <!-- User Management -->
+    <div class="users-box">
+      <div class="users-header">
+        <div class="users-title">// Benutzer & API Keys (${(project.users||[]).length})</div>
+        <button class="add-user-btn" onclick="toggleAddUserForm()">＋ Benutzer</button>
+      </div>
+
+      <!-- Add User Form -->
+      <div class="add-user-form" id="addUserForm">
+        <div class="add-user-grid">
+          <div>
+            <label style="font-size:9px;font-family:var(--mono);color:var(--text3);text-transform:uppercase;letter-spacing:0.5px;display:block;margin-bottom:4px;">Name *</label>
+            <input class="field-input" type="text" id="newUserName" placeholder="Max Mustermann">
+          </div>
+          <div>
+            <label style="font-size:9px;font-family:var(--mono);color:var(--text3);text-transform:uppercase;letter-spacing:0.5px;display:block;margin-bottom:4px;">Rolle</label>
+            <select class="field-input" id="newUserRole" style="width:100%;">
+              <option value="user">User</option>
+              <option value="admin">Admin</option>
+            </select>
+          </div>
+          <div>
+            <label style="font-size:9px;font-family:var(--mono);color:var(--text3);text-transform:uppercase;letter-spacing:0.5px;display:block;margin-bottom:4px;">Eigener Key (optional)</label>
+            <input class="field-input" type="text" id="newUserKey" placeholder="auto-generiert">
+          </div>
+        </div>
+        <div class="add-user-actions">
+          <button class="user-save-btn" onclick="addUser('${project.id}')">✓ Anlegen</button>
+          <button class="user-cancel-btn" onclick="toggleAddUserForm()">Abbrechen</button>
+        </div>
+      </div>
+
+      <!-- User List -->
+      ${renderUserList(project)}
     </div>`;
 }
 
@@ -1475,6 +1647,125 @@ function selectEmoji(e, el) {
   selectedEmoji = e;
   document.querySelectorAll('.emoji-opt').forEach(x => x.classList.remove('selected'));
   el.classList.add('selected');
+}
+
+
+// ── USER MANAGEMENT ───────────────────────────────────────────────────────
+function toggleAddUserForm() {
+  const form = document.getElementById('addUserForm');
+  if (form) form.classList.toggle('open');
+}
+
+function renderUserList(project) {
+  const users = project.users || [];
+  if (!users.length) {
+    return '<div class="empty-users">Noch keine Benutzer – klick auf "+ Benutzer" um den ersten anzulegen</div>';
+  }
+  return users.map(u => `
+    <div class="user-row" id="urow-${u.key}">
+      <div class="user-key">${u.key}</div>
+      <div class="user-info">
+        <div class="user-name">${u.name}</div>
+        <div class="user-role">${u.role || 'user'}</div>
+      </div>
+      <div class="user-status ${u.status||'aktiv'}">${u.status||'aktiv'}</div>
+      <div class="user-actions">
+        <button class="user-btn" onclick="copyKey('${u.key}')" title="Key kopieren">📋</button>
+        <button class="user-btn toggle" onclick="toggleUserStatus('${project.id}','${u.key}')" title="Status wechseln">⏸</button>
+        <button class="user-btn danger" onclick="removeUser('${project.id}','${u.key}')" title="Löschen">✕</button>
+      </div>
+    </div>`).join('');
+}
+
+function generateKey(projectRepo) {
+  const prefix = projectRepo ? projectRepo.substring(0,3).toUpperCase() : 'APP';
+  const rand = Math.random().toString(36).substring(2,6).toUpperCase();
+  return prefix + '-' + rand;
+}
+
+async function addUser(projectId) {
+  const name = document.getElementById('newUserName')?.value?.trim();
+  if (!name) { showToast('⚠ Bitte Name eingeben'); return; }
+
+  const project = projects.find(p => p.id === projectId);
+  if (!project) return;
+
+  const customKey = document.getElementById('newUserKey')?.value?.trim();
+  const key = customKey || generateKey(project.repo);
+  const role = document.getElementById('newUserRole')?.value || 'user';
+
+  if (!project.users) project.users = [];
+
+  // Check duplicate key
+  if (project.users.find(u => u.key === key)) {
+    showToast('⚠ Dieser Key existiert bereits');
+    return;
+  }
+
+  const user = { key, name, role, status: 'aktiv', created: new Date().toLocaleDateString('de-DE') };
+  project.users.push(user);
+  saveProjects();
+
+  // Save to Sheets
+  await syncUsersToSheets(project);
+
+  document.getElementById('newUserName').value = '';
+  document.getElementById('newUserKey').value = '';
+  toggleAddUserForm();
+  renderMain();
+  showToast('✅ Benutzer angelegt: ' + key);
+}
+
+function copyKey(key) {
+  navigator.clipboard.writeText(key).then(() => {
+    showToast('📋 Key kopiert: ' + key);
+  }).catch(() => {
+    showToast('Key: ' + key);
+  });
+}
+
+function toggleUserStatus(projectId, key) {
+  const project = projects.find(p => p.id === projectId);
+  if (!project) return;
+  const user = project.users?.find(u => u.key === key);
+  if (!user) return;
+  user.status = user.status === 'inaktiv' ? 'aktiv' : 'inaktiv';
+  saveProjects();
+  syncUsersToSheets(project);
+  renderMain();
+  showToast(user.status === 'aktiv' ? '✅ Aktiviert' : '⏸ Deaktiviert');
+}
+
+function removeUser(projectId, key) {
+  if (!confirm('Benutzer wirklich löschen?')) return;
+  const project = projects.find(p => p.id === projectId);
+  if (!project) return;
+  project.users = (project.users || []).filter(u => u.key !== key);
+  saveProjects();
+  syncUsersToSheets(project);
+  renderMain();
+  showToast('🗑 Benutzer gelöscht');
+}
+
+async function syncUsersToSheets(project) {
+  const cfg = getConfig();
+  if (!cfg.appsScriptUrl || !cfg.gSheetsId) return;
+
+  const tabName = project.repo.replace(/[^a-zA-Z0-9]/g,'_') + '_User';
+  const users = project.users || [];
+  const headers = ['api_key','name','role','status','created'];
+
+  try {
+    // Clear and rewrite all users
+    for (const u of users) {
+      const row = [u.key, u.name, u.role||'user', u.status||'aktiv', u.created||''];
+      const url = `${cfg.appsScriptUrl}?action=saveRow&sheetId=${cfg.gSheetsId}&tab=${encodeURIComponent(tabName)}&headers=${encodeURIComponent(JSON.stringify(headers))}&row=${encodeURIComponent(JSON.stringify(row))}`;
+      await fetch(url);
+    }
+    setSheetsStatus('ok');
+  } catch(e) {
+    console.error('User sync error:', e);
+  }
 }
 
 // ── TOAST ──────────────────────────────────────────────────────────────────
