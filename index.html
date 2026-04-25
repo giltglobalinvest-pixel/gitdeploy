@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
-<title>GitDeploy v1.3</title>
+<title>GitDeploy v1.4</title>
 <link href="https://fonts.googleapis.com/css2?family=DM+Mono:wght@400;500&family=Bricolage+Grotesque:wght@400;600;700;800&display=swap" rel="stylesheet">
 <style>
 :root {
@@ -539,7 +539,7 @@ body::after {
   <div class="logo">
     <button onclick="toggleMobileSidebar()" class="mobile-menu-btn" style="display:none;background:var(--surface2);border:1px solid var(--border2);color:var(--text);border-radius:8px;padding:6px 10px;font-size:16px;cursor:pointer;margin-right:8px;">☰</button>
     <div class="logo-mark">🚀</div>
-    <div class="logo-name">Git<span>Deploy</span> <span style="font-size:9px;color:var(--text3);font-family:var(--mono);">v1.3</span></div>
+    <div class="logo-name">Git<span>Deploy</span> <span style="font-size:9px;color:var(--text3);font-family:var(--mono);">v1.4</span></div>
   </div>
   <div class="token-status">
     <div class="token-dot" id="sheetsStatusDot" style="background:var(--text3);"></div>
@@ -568,22 +568,50 @@ body::after {
   </div>
 </div>
 
-<!-- TOKEN MODAL -->
+<!-- SETTINGS MODAL -->
 <div class="overlay" id="tokenOverlay">
   <div class="modal">
     <div class="modal-handle"></div>
-    <div class="modal-title">⚙️ GitHub Token</div>
-    <div class="field">
-      <label class="field-label">GitHub Token</label>
-      <div class="field-row">
-        <input class="field-input" type="password" id="tokenInput" placeholder="ghp_...">
-        <button onclick="toggleVis('tokenInput')" style="padding:9px 12px;border-radius:8px;border:1px solid var(--border2);background:var(--surface2);color:var(--text2);cursor:pointer;font-size:13px;">👁</button>
+    <div class="modal-title">⚙️ GitDeploy Einstellungen</div>
+
+    <!-- GitHub Section -->
+    <div style="background:var(--surface2);border:1px solid var(--border);border-radius:12px;padding:14px;margin-bottom:14px;">
+      <div style="font-size:9px;font-family:var(--mono);color:var(--text3);text-transform:uppercase;letter-spacing:1px;margin-bottom:12px;">🐙 GitHub</div>
+      <div class="field">
+        <label class="field-label">GitHub Username</label>
+        <input class="field-input" type="text" id="usernameInput" placeholder="dein-username">
+      </div>
+      <div class="field">
+        <label class="field-label">GitHub Token</label>
+        <div class="field-row">
+          <input class="field-input" type="password" id="tokenInput" placeholder="ghp_...">
+          <button onclick="toggleVis('tokenInput')" style="padding:9px 12px;border-radius:8px;border:1px solid var(--border2);background:var(--surface2);color:var(--text2);cursor:pointer;font-size:13px;">👁</button>
+        </div>
       </div>
     </div>
-    <div class="field">
-      <label class="field-label">GitHub Username</label>
-      <input class="field-input" type="text" id="usernameInput" placeholder="dein-username">
+
+    <!-- Google Section -->
+    <div style="background:var(--surface2);border:1px solid var(--border);border-radius:12px;padding:14px;margin-bottom:14px;">
+      <div style="font-size:9px;font-family:var(--mono);color:var(--text3);text-transform:uppercase;letter-spacing:1px;margin-bottom:12px;">📊 Google Workspace</div>
+      <div class="field">
+        <label class="field-label">Google Sheets API Key</label>
+        <div class="field-row">
+          <input class="field-input" type="password" id="gSheetsKeyInput" placeholder="AIza...">
+          <button onclick="toggleVis('gSheetsKeyInput')" style="padding:9px 12px;border-radius:8px;border:1px solid var(--border2);background:var(--surface2);color:var(--text2);cursor:pointer;font-size:13px;">👁</button>
+        </div>
+      </div>
+      <div class="field">
+        <label class="field-label">Google Sheets ID</label>
+        <input class="field-input" type="text" id="gSheetsIdInput" placeholder="1BxiMVs...">
+      </div>
+      <div class="field">
+        <label class="field-label">Google Drive Ordner ID</label>
+        <input class="field-input" type="text" id="gDriveIdInput" placeholder="1A2B3C...">
+      </div>
+      <div id="sheetsTestResult" style="display:none;margin-top:8px;font-size:11px;font-family:var(--mono);padding:8px;border-radius:8px;"></div>
+      <button onclick="testSheetsConnection()" style="width:100%;margin-top:8px;padding:8px;border-radius:8px;border:1px solid var(--border2);background:var(--surface3);color:var(--text2);font-family:var(--mono);font-size:11px;cursor:pointer;">🔌 Verbindung testen</button>
     </div>
+
     <div class="modal-actions">
       <button class="btn-cancel" onclick="closeTokenModal()">Abbrechen</button>
       <button class="btn-save" onclick="saveToken()">Speichern ✓</button>
@@ -655,17 +683,64 @@ body::after {
 
 <script>
 // ── SHEETS CONFIG ─────────────────────────────────────────────────────────
-const SHEETS_API_KEY = 'AIzaSyA_J2QlUxNnzdrsWOMJAunJY2hjHagY92s';
-const SHEETS_ID = '1-SE0GAXgqrfoK0n9kH79cl5IcKygAcH-_fyktngIuBg';
+// Keys loaded dynamically from settings
 const TAB_PROJECTS = 'GitDeploy_Projekte';
 const TAB_KEYS = 'GitDeploy_Keys';
 const TAB_VERSIONS = 'GitDeploy_Versionen';
+
+function getSheetsConfig() {
+  const cfg = getConfig();
+  return {
+    apiKey: cfg.gSheetsKey || '',
+    sheetsId: cfg.gSheetsId || '',
+    driveId: cfg.gDriveId || '',
+  };
+}
+
+
+async function testSheetsConnection() {
+  const key = document.getElementById('gSheetsKeyInput').value.trim();
+  const id = document.getElementById('gSheetsIdInput').value.trim();
+  const result = document.getElementById('sheetsTestResult');
+  if (!key || !id) { 
+    result.style.display='block';
+    result.style.background='rgba(255,82,82,0.1)';
+    result.style.color='var(--red)';
+    result.textContent='⚠ Bitte Key & ID eingeben';
+    return; 
+  }
+  result.style.display='block';
+  result.style.background='rgba(68,138,255,0.1)';
+  result.style.color='var(--blue)';
+  result.textContent='🔄 Teste Verbindung...';
+  try {
+    const url = `https://sheets.googleapis.com/v4/spreadsheets/${id}?key=${key}`;
+    const res = await fetch(url);
+    if (res.ok) {
+      const data = await res.json();
+      result.style.background='rgba(0,230,118,0.1)';
+      result.style.color='var(--green)';
+      result.textContent=`✅ Verbunden: "${data.properties?.title||'Unbekannt'}"`;
+    } else {
+      const err = await res.json();
+      result.style.background='rgba(255,82,82,0.1)';
+      result.style.color='var(--red)';
+      result.textContent='❌ ' + (err.error?.message||'Verbindung fehlgeschlagen');
+    }
+  } catch(e) {
+    result.style.background='rgba(255,82,82,0.1)';
+    result.style.color='var(--red)';
+    result.textContent='❌ Netzwerkfehler – bitte über GitHub Pages öffnen';
+  }
+}
 
 async function loadFromSheets() {
   try {
     setSheetsStatus('loading');
     // Load projects
-    const projUrl = `https://sheets.googleapis.com/v4/spreadsheets/${SHEETS_ID}/values/${TAB_PROJECTS}!A1:Z1000?key=${SHEETS_API_KEY}`;
+    const sc = getSheetsConfig();
+  if (!sc.apiKey || !sc.sheetsId) { setSheetsStatus('error'); return false; }
+  const projUrl = `https://sheets.googleapis.com/v4/spreadsheets/${sc.sheetsId}/values/${TAB_PROJECTS}!A1:Z1000?key=${sc.apiKey}`;
     const projRes = await fetch(projUrl);
     if (projRes.ok) {
       const data = await projRes.json();
@@ -692,7 +767,7 @@ async function loadFromSheets() {
       }
     }
     // Load keys
-    const keysUrl = `https://sheets.googleapis.com/v4/spreadsheets/${SHEETS_ID}/values/${TAB_KEYS}!A1:Z1000?key=${SHEETS_API_KEY}`;
+    const keysUrl = `https://sheets.googleapis.com/v4/spreadsheets/${sc.sheetsId}/values/${TAB_KEYS}!A1:Z1000?key=${sc.apiKey}`;
     const keysRes = await fetch(keysUrl);
     if (keysRes.ok) {
       const data = await keysRes.json();
@@ -839,6 +914,9 @@ function openTokenModal() {
   const cfg = getConfig();
   document.getElementById('tokenInput').value = cfg.token || '';
   document.getElementById('usernameInput').value = cfg.username || '';
+  document.getElementById('gSheetsKeyInput').value = cfg.gSheetsKey || '';
+  document.getElementById('gSheetsIdInput').value = cfg.gSheetsId || '';
+  document.getElementById('gDriveIdInput').value = cfg.gDriveId || '';
   document.getElementById('tokenOverlay').classList.add('open');
 }
 
@@ -850,10 +928,15 @@ function saveToken() {
   const cfg = getConfig();
   cfg.token = document.getElementById('tokenInput').value.trim();
   cfg.username = document.getElementById('usernameInput').value.trim();
+  cfg.gSheetsKey = document.getElementById('gSheetsKeyInput').value.trim();
+  cfg.gSheetsId = document.getElementById('gSheetsIdInput').value.trim();
+  cfg.gDriveId = document.getElementById('gDriveIdInput').value.trim();
   saveConfig(cfg);
   updateTokenStatus();
   closeTokenModal();
-  showToast('✅ Token gespeichert');
+  // Reload from sheets if configured
+  if (cfg.gSheetsKey && cfg.gSheetsId) loadFromSheets();
+  showToast('✅ Einstellungen gespeichert');
 }
 
 function toggleVis(id) {
