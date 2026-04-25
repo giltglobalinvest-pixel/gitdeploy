@@ -1,0 +1,1319 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
+<title>GitDeploy v1.1</title>
+<link href="https://fonts.googleapis.com/css2?family=DM+Mono:wght@400;500&family=Bricolage+Grotesque:wght@400;600;700;800&display=swap" rel="stylesheet">
+<style>
+:root {
+  --bg: #0d0d0d;
+  --surface: #161616;
+  --surface2: #1f1f1f;
+  --surface3: #282828;
+  --border: #2e2e2e;
+  --border2: #3d3d3d;
+  --text: #f0f0f0;
+  --text2: #888;
+  --text3: #444;
+  --green: #00e676;
+  --red: #ff5252;
+  --blue: #448aff;
+  --yellow: #ffd740;
+  --mono: 'DM Mono', monospace;
+  --sans: 'Bricolage Grotesque', sans-serif;
+}
+
+* { margin:0; padding:0; box-sizing:border-box; -webkit-tap-highlight-color:transparent; }
+
+body {
+  background:var(--bg);
+  color:var(--text);
+  font-family:var(--sans);
+  min-height:100vh;
+  padding:0;
+}
+
+/* Scanline effect */
+body::after {
+  content:'';
+  position:fixed;
+  inset:0;
+  background:repeating-linear-gradient(0deg, transparent, transparent 2px, rgba(0,0,0,0.03) 2px, rgba(0,0,0,0.03) 4px);
+  pointer-events:none;
+  z-index:999;
+}
+
+/* Header */
+.header {
+  border-bottom:1px solid var(--border);
+  padding:16px 20px;
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  position:sticky;
+  top:0;
+  background:rgba(13,13,13,0.95);
+  backdrop-filter:blur(10px);
+  z-index:10;
+}
+
+.logo {
+  display:flex;
+  align-items:center;
+  gap:10px;
+}
+
+.logo-mark {
+  width:30px;
+  height:30px;
+  background:var(--green);
+  border-radius:6px;
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  font-size:16px;
+}
+
+.logo-name {
+  font-size:16px;
+  font-weight:800;
+  letter-spacing:-0.5px;
+}
+
+.logo-name span { color:var(--green); }
+
+.token-status {
+  display:flex;
+  align-items:center;
+  gap:6px;
+  font-size:10px;
+  font-family:var(--mono);
+  color:var(--text2);
+}
+
+.token-dot {
+  width:6px;
+  height:6px;
+  border-radius:50%;
+  background:var(--text3);
+}
+
+.token-dot.ok { background:var(--green); box-shadow:0 0 6px var(--green); }
+
+/* Main layout */
+.layout {
+  display:grid;
+  grid-template-columns:260px 1fr;
+  min-height:calc(100vh - 61px);
+}
+
+/* Sidebar */
+.sidebar {
+  border-right:1px solid var(--border);
+  padding:16px;
+  overflow-y:auto;
+}
+
+.sidebar-title {
+  font-size:9px;
+  font-family:var(--mono);
+  color:var(--text3);
+  text-transform:uppercase;
+  letter-spacing:2px;
+  margin-bottom:12px;
+  padding-left:4px;
+}
+
+.project-item {
+  display:flex;
+  align-items:center;
+  gap:10px;
+  padding:10px 12px;
+  border-radius:10px;
+  cursor:pointer;
+  transition:all 0.15s;
+  margin-bottom:4px;
+  border:1px solid transparent;
+}
+
+.project-item:hover { background:var(--surface2); }
+.project-item.active { background:var(--surface2); border-color:var(--border2); }
+
+.project-emoji { font-size:18px; flex-shrink:0; }
+
+.project-info { flex:1; min-width:0; }
+
+.project-name {
+  font-size:13px;
+  font-weight:700;
+  white-space:nowrap;
+  overflow:hidden;
+  text-overflow:ellipsis;
+}
+
+.project-repo {
+  font-size:10px;
+  color:var(--text2);
+  font-family:var(--mono);
+  white-space:nowrap;
+  overflow:hidden;
+  text-overflow:ellipsis;
+}
+
+.ver-badge {
+  font-size:9px;
+  font-family:var(--mono);
+  font-weight:500;
+  padding:2px 6px;
+  border-radius:4px;
+  background:var(--surface3);
+  color:var(--text2);
+  flex-shrink:0;
+}
+
+.add-project-btn {
+  width:100%;
+  padding:10px;
+  border-radius:10px;
+  border:1px dashed var(--border2);
+  background:transparent;
+  color:var(--text3);
+  font-family:var(--sans);
+  font-size:12px;
+  cursor:pointer;
+  transition:all 0.15s;
+  margin-top:8px;
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  gap:6px;
+}
+
+.add-project-btn:hover { border-color:var(--green); color:var(--green); }
+
+/* Main content */
+.main {
+  padding:24px;
+  overflow-y:auto;
+}
+
+.main-title {
+  font-size:24px;
+  font-weight:800;
+  margin-bottom:4px;
+  letter-spacing:-0.5px;
+}
+
+.main-sub {
+  font-size:12px;
+  color:var(--text2);
+  font-family:var(--mono);
+  margin-bottom:24px;
+}
+
+/* Deploy zone */
+.deploy-zone {
+  border:1px solid var(--border);
+  border-radius:16px;
+  overflow:hidden;
+  margin-bottom:20px;
+}
+
+.deploy-zone-header {
+  background:var(--surface);
+  padding:14px 18px;
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  border-bottom:1px solid var(--border);
+}
+
+.zone-title {
+  font-size:11px;
+  font-family:var(--mono);
+  color:var(--text2);
+  text-transform:uppercase;
+  letter-spacing:1px;
+}
+
+.deploy-zone-body { padding:18px; }
+
+.file-drop {
+  border:2px dashed var(--border2);
+  border-radius:12px;
+  padding:32px;
+  text-align:center;
+  cursor:pointer;
+  transition:all 0.2s;
+  position:relative;
+  margin-bottom:16px;
+}
+
+.file-drop:hover, .file-drop.drag { border-color:var(--green); background:rgba(0,230,118,0.03); }
+.file-drop input[type=file] { position:absolute; inset:0; opacity:0; cursor:pointer; }
+.file-drop-icon { font-size:32px; margin-bottom:8px; }
+.file-drop-text { font-size:13px; color:var(--text2); }
+.file-drop-text strong { color:var(--text); }
+.file-drop-name { font-size:12px; font-family:var(--mono); color:var(--green); margin-top:6px; }
+
+.deploy-btn {
+  width:100%;
+  padding:14px;
+  border-radius:12px;
+  border:none;
+  background:var(--green);
+  color:#0d0d0d;
+  font-family:var(--sans);
+  font-size:15px;
+  font-weight:800;
+  cursor:pointer;
+  transition:all 0.2s;
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  gap:8px;
+  letter-spacing:-0.3px;
+}
+
+.deploy-btn:hover { transform:translateY(-1px); box-shadow:0 4px 20px rgba(0,230,118,0.3); }
+.deploy-btn:disabled { opacity:0.4; cursor:not-allowed; transform:none; box-shadow:none; }
+
+/* Progress */
+.progress-wrap {
+  margin-top:14px;
+  display:none;
+}
+
+.progress-label {
+  display:flex;
+  justify-content:space-between;
+  font-size:10px;
+  font-family:var(--mono);
+  color:var(--text2);
+  margin-bottom:6px;
+}
+
+.progress-track {
+  height:3px;
+  background:var(--surface3);
+  border-radius:2px;
+  overflow:hidden;
+}
+
+.progress-fill {
+  height:100%;
+  background:var(--green);
+  border-radius:2px;
+  width:0%;
+  transition:width 0.4s ease;
+}
+
+/* Status */
+.status-box {
+  margin-top:14px;
+  padding:14px;
+  border-radius:10px;
+  font-size:12px;
+  font-family:var(--mono);
+  line-height:1.8;
+  display:none;
+}
+
+.status-box.ok { background:rgba(0,230,118,0.06); border:1px solid rgba(0,230,118,0.2); color:var(--green); }
+.status-box.err { background:rgba(255,82,82,0.06); border:1px solid rgba(255,82,82,0.2); color:var(--red); }
+.status-box.loading { background:rgba(68,138,255,0.06); border:1px solid rgba(68,138,255,0.2); color:var(--blue); }
+
+/* Version history */
+.versions-box {
+  border:1px solid var(--border);
+  border-radius:16px;
+  overflow:hidden;
+}
+
+.versions-header {
+  background:var(--surface);
+  padding:14px 18px;
+  border-bottom:1px solid var(--border);
+  font-size:11px;
+  font-family:var(--mono);
+  color:var(--text2);
+  text-transform:uppercase;
+  letter-spacing:1px;
+}
+
+.version-row {
+  display:flex;
+  align-items:center;
+  gap:12px;
+  padding:12px 18px;
+  border-bottom:1px solid var(--border);
+  transition:background 0.1s;
+}
+
+.version-row:last-child { border-bottom:none; }
+.version-row:hover { background:var(--surface); }
+
+.ver-num {
+  font-family:var(--mono);
+  font-size:12px;
+  font-weight:500;
+  color:var(--green);
+  flex-shrink:0;
+  width:50px;
+}
+
+.ver-details { flex:1; min-width:0; }
+.ver-note { font-size:12px; color:var(--text); }
+.ver-date { font-size:10px; color:var(--text2); font-family:var(--mono); }
+.ver-sha { font-size:9px; color:var(--text3); font-family:var(--mono); }
+
+.ver-link {
+  padding:4px 10px;
+  border-radius:6px;
+  border:1px solid var(--border2);
+  background:transparent;
+  color:var(--text2);
+  font-size:10px;
+  font-family:var(--mono);
+  cursor:pointer;
+  text-decoration:none;
+  transition:all 0.15s;
+  flex-shrink:0;
+}
+
+.ver-link:hover { border-color:var(--blue); color:var(--blue); }
+
+.empty-versions {
+  padding:32px;
+  text-align:center;
+  color:var(--text3);
+  font-size:12px;
+  font-family:var(--mono);
+}
+
+/* Settings panel */
+.settings-panel {
+  border:1px solid var(--border);
+  border-radius:16px;
+  overflow:hidden;
+  margin-bottom:20px;
+  display:none;
+}
+
+.settings-panel.open { display:block; }
+
+.settings-header {
+  background:var(--surface);
+  padding:14px 18px;
+  border-bottom:1px solid var(--border);
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+}
+
+.settings-title { font-size:11px; font-family:var(--mono); color:var(--text2); text-transform:uppercase; letter-spacing:1px; }
+
+.close-btn {
+  background:none; border:none; color:var(--text3);
+  cursor:pointer; font-size:16px; padding:0;
+  transition:color 0.15s;
+}
+
+.close-btn:hover { color:var(--text); }
+
+.settings-body { padding:18px; }
+
+.field { margin-bottom:12px; }
+
+.field-label {
+  display:block;
+  font-size:9px;
+  font-family:var(--mono);
+  color:var(--text3);
+  text-transform:uppercase;
+  letter-spacing:0.5px;
+  margin-bottom:5px;
+}
+
+.field-input, .field-select {
+  width:100%;
+  background:var(--surface2);
+  border:1px solid var(--border2);
+  border-radius:8px;
+  padding:9px 12px;
+  color:var(--text);
+  font-family:var(--mono);
+  font-size:12px;
+  outline:none;
+  transition:border-color 0.15s;
+}
+
+.field-input:focus, .field-select:focus { border-color:var(--green); }
+.field-input::placeholder { color:var(--text3); }
+.field-select option { background:var(--surface2); }
+
+.field-row { display:flex; gap:8px; }
+.field-row .field-input { flex:1; }
+
+.settings-save-btn {
+  width:100%;
+  padding:10px;
+  border-radius:10px;
+  border:none;
+  background:var(--surface3);
+  color:var(--text);
+  font-family:var(--sans);
+  font-size:13px;
+  font-weight:700;
+  cursor:pointer;
+  transition:all 0.15s;
+  margin-top:4px;
+}
+
+.settings-save-btn:hover { background:var(--border2); }
+
+/* No project selected */
+.empty-main {
+  display:flex;
+  flex-direction:column;
+  align-items:center;
+  justify-content:center;
+  min-height:400px;
+  color:var(--text3);
+  text-align:center;
+}
+
+.empty-main-icon { font-size:48px; margin-bottom:12px; }
+.empty-main-title { font-size:16px; font-weight:700; color:var(--text2); margin-bottom:6px; }
+.empty-main-sub { font-size:12px; font-family:var(--mono); }
+
+/* Token modal */
+.overlay { display:none; position:fixed; inset:0; background:rgba(0,0,0,0.8); z-index:100; align-items:flex-end; justify-content:center; }
+.overlay.open { display:flex; }
+.modal { background:var(--surface); border:1px solid var(--border2); border-radius:20px 20px 0 0; width:100%; max-width:480px; padding:24px 20px 40px; animation:slideUp 0.25s ease; }
+@keyframes slideUp { from{transform:translateY(100%);opacity:0;} to{transform:translateY(0);opacity:1;} }
+.modal-handle { width:36px; height:3px; background:var(--border2); border-radius:2px; margin:0 auto 20px; }
+.modal-title { font-size:18px; font-weight:800; margin-bottom:16px; }
+.modal-actions { display:flex; gap:8px; margin-top:16px; }
+.btn-cancel { flex:1; padding:11px; border-radius:10px; border:1px solid var(--border2); background:transparent; color:var(--text2); font-family:var(--sans); font-size:13px; font-weight:700; cursor:pointer; }
+.btn-save { flex:2; padding:11px; border-radius:10px; border:none; background:var(--green); color:#0d0d0d; font-family:var(--sans); font-size:13px; font-weight:800; cursor:pointer; }
+
+/* Toast */
+.toast { position:fixed; bottom:20px; left:50%; transform:translateX(-50%) translateY(80px); background:var(--surface3); border:1px solid var(--border2); color:var(--text); padding:10px 18px; border-radius:10px; font-size:12px; font-family:var(--mono); z-index:999; transition:transform 0.3s; white-space:nowrap; }
+.toast.show { transform:translateX(-50%) translateY(0); }
+
+/* Emoji picker */
+.emoji-grid { display:grid; grid-template-columns:repeat(8,1fr); gap:4px; margin-top:6px; }
+.emoji-opt { aspect-ratio:1; border-radius:6px; border:1px solid var(--border); background:var(--surface2); display:flex; align-items:center; justify-content:center; font-size:16px; cursor:pointer; transition:all 0.1s; }
+.emoji-opt:hover, .emoji-opt.selected { border-color:var(--green); background:rgba(0,230,118,0.08); }
+
+@media(max-width:600px) {
+  .layout { grid-template-columns:1fr; }
+  .sidebar { 
+    display:none; 
+    position:fixed;
+    inset:0;
+    top:61px;
+    z-index:50;
+    background:var(--bg);
+    padding:16px;
+    overflow-y:auto;
+  }
+  .sidebar.mobile-open { display:block; }
+  .main { padding:16px; }
+  .mobile-menu-btn { display:flex !important; }
+}
+@media(min-width:768px) {
+  .overlay { align-items:center; }
+  .modal { border-radius:20px; margin:20px; }
+}
+::-webkit-scrollbar { width:4px; }
+::-webkit-scrollbar-track { background:transparent; }
+::-webkit-scrollbar-thumb { background:var(--border2); border-radius:2px; }
+</style>
+</head>
+<body>
+
+<header class="header">
+  <div class="logo">
+    <button onclick="toggleMobileSidebar()" class="mobile-menu-btn" style="display:none;background:var(--surface2);border:1px solid var(--border2);color:var(--text);border-radius:8px;padding:6px 10px;font-size:16px;cursor:pointer;margin-right:8px;">☰</button>
+    <div class="logo-mark">🚀</div>
+    <div class="logo-name">Git<span>Deploy</span> <span style="font-size:9px;color:var(--text3);font-family:var(--mono);">v1.1</span></div>
+  </div>
+  <div class="token-status">
+    <div class="token-dot" id="sheetsStatusDot" style="background:var(--text3);"></div>
+    <span id="sheetsStatusLabel" style="margin-right:10px;">Sheets</span>
+    <div class="token-dot" id="tokenDot"></div>
+    <span id="tokenLabel">Kein Token</span>
+    <button onclick="openTokenModal()" style="margin-left:8px;background:var(--surface2);border:1px solid var(--border2);color:var(--text2);border-radius:6px;padding:3px 8px;font-size:10px;font-family:var(--mono);cursor:pointer;">⚙</button>
+  </div>
+</header>
+
+<div class="layout">
+  <!-- SIDEBAR -->
+  <div class="sidebar">
+    <div class="sidebar-title">// Projekte</div>
+    <div id="projectList"></div>
+    <button class="add-project-btn" onclick="openAddProject()">＋ Neues Projekt</button>
+  </div>
+
+  <!-- MAIN -->
+  <div class="main" id="mainContent">
+    <div class="empty-main">
+      <div class="empty-main-icon">📂</div>
+      <div class="empty-main-title">Projekt auswählen</div>
+      <div class="empty-main-sub">← Wähle ein Projekt aus der Liste</div>
+    </div>
+  </div>
+</div>
+
+<!-- TOKEN MODAL -->
+<div class="overlay" id="tokenOverlay">
+  <div class="modal">
+    <div class="modal-handle"></div>
+    <div class="modal-title">⚙️ GitHub Token</div>
+    <div class="field">
+      <label class="field-label">GitHub Token</label>
+      <div class="field-row">
+        <input class="field-input" type="password" id="tokenInput" placeholder="ghp_...">
+        <button onclick="toggleVis('tokenInput')" style="padding:9px 12px;border-radius:8px;border:1px solid var(--border2);background:var(--surface2);color:var(--text2);cursor:pointer;font-size:13px;">👁</button>
+      </div>
+    </div>
+    <div class="field">
+      <label class="field-label">GitHub Username</label>
+      <input class="field-input" type="text" id="usernameInput" placeholder="dein-username">
+    </div>
+    <div class="modal-actions">
+      <button class="btn-cancel" onclick="closeTokenModal()">Abbrechen</button>
+      <button class="btn-save" onclick="saveToken()">Speichern ✓</button>
+    </div>
+  </div>
+</div>
+
+<!-- ADD PROJECT MODAL -->
+<div class="overlay" id="addOverlay">
+  <div class="modal">
+    <div class="modal-handle"></div>
+    <div class="modal-title">Neues Projekt</div>
+    <div class="field">
+      <label class="field-label">Projektname *</label>
+      <input class="field-input" type="text" id="newName" placeholder="z.B. Kunden-App Aufzugshandwerk">
+    </div>
+    <div class="field">
+      <label class="field-label">GitHub Repository Name *</label>
+      <input class="field-input" type="text" id="newRepo" placeholder="z.B. kunden-app">
+    </div>
+    <div class="field">
+      <label class="field-label">Beschreibung</label>
+      <input class="field-input" type="text" id="newDesc" placeholder="Kurze Beschreibung">
+    </div>
+    <div class="field">
+      <label class="field-label">Icon</label>
+      <div class="emoji-grid" id="emojiGrid"></div>
+    </div>
+    <!-- API Keys -->
+    <div style="background:var(--surface2);border:1px solid var(--border);border-radius:12px;padding:14px;margin-top:4px;margin-bottom:12px;">
+      <div style="font-size:9px;font-family:var(--mono);color:var(--text3);text-transform:uppercase;letter-spacing:1px;margin-bottom:12px;">🔑 API Keys (optional – später ergänzbar)</div>
+      <div class="field">
+        <label class="field-label">Anthropic API Key</label>
+        <div style="display:flex;gap:6px;">
+          <input class="field-input" type="password" id="newAnthropicKey" placeholder="sk-ant-..." style="flex:1;">
+          <button onclick="toggleVis('newAnthropicKey')" style="padding:8px;border-radius:8px;border:1px solid var(--border2);background:var(--surface3);color:var(--text2);cursor:pointer;">👁</button>
+        </div>
+      </div>
+      <div class="field">
+        <label class="field-label">Google Sheets API Key</label>
+        <div style="display:flex;gap:6px;">
+          <input class="field-input" type="password" id="newGSheetsKey" placeholder="AIza..." style="flex:1;" value="AIzaSyA_J2QlUxNnzdrsWOMJAunJY2hjHagY92s">
+          <button onclick="toggleVis('newGSheetsKey')" style="padding:8px;border-radius:8px;border:1px solid var(--border2);background:var(--surface3);color:var(--text2);cursor:pointer;">👁</button>
+        </div>
+      </div>
+      <div class="field">
+        <label class="field-label">Google Sheets ID</label>
+        <input class="field-input" type="text" id="newGSheetsId" placeholder="1BxiMVs..." value="1-SE0GAXgqrfoK0n9kH79cl5IcKygAcH-_fyktngIuBg">
+      </div>
+      <div class="field">
+        <label class="field-label">Google Drive Ordner ID</label>
+        <input class="field-input" type="text" id="newGDriveId" placeholder="1A2B3C..." value="12qk_kdFiHhc1z5Vt67jqAX0vK6kw0x4b">
+      </div>
+    </div>
+
+    <div class="field">
+      <label class="field-label" style="display:flex;align-items:center;gap:8px;">
+        <input type="checkbox" id="newAutoCreate" checked> Repository automatisch erstellen
+      </label>
+    </div>
+    <div class="modal-actions">
+      <button class="btn-cancel" onclick="closeAddProject()">Abbrechen</button>
+      <button class="btn-save" onclick="createProject()">Erstellen ⚡</button>
+    </div>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+// ── SHEETS CONFIG ─────────────────────────────────────────────────────────
+const SHEETS_API_KEY = 'AIzaSyA_J2QlUxNnzdrsWOMJAunJY2hjHagY92s';
+const SHEETS_ID = '1-SE0GAXgqrfoK0n9kH79cl5IcKygAcH-_fyktngIuBg';
+const TAB_PROJECTS = 'GitDeploy_Projekte';
+const TAB_KEYS = 'GitDeploy_Keys';
+const TAB_VERSIONS = 'GitDeploy_Versionen';
+
+async function loadFromSheets() {
+  try {
+    setSheetsStatus('loading');
+    // Load projects
+    const projUrl = `https://sheets.googleapis.com/v4/spreadsheets/${SHEETS_ID}/values/${TAB_PROJECTS}!A1:Z1000?key=${SHEETS_API_KEY}`;
+    const projRes = await fetch(projUrl);
+    if (projRes.ok) {
+      const data = await projRes.json();
+      const rows = data.values || [];
+      if (rows.length > 1) {
+        const headers = rows[0];
+        const sheetProjects = rows.slice(1).map(r => {
+          const obj = {};
+          headers.forEach((h, i) => obj[h] = r[i] || '');
+          return obj;
+        }).filter(p => p.id);
+        // Merge with local
+        sheetProjects.forEach(sp => {
+          const local = projects.find(p => p.id === sp.id);
+          if (!local) {
+            projects.push({
+              id: sp.id, name: sp.name, repo: sp.repo,
+              desc: sp.desc||'', icon: sp.icon||'🚀',
+              versions: [], created: sp.created||'',
+              keys: {}
+            });
+          }
+        });
+      }
+    }
+    // Load keys
+    const keysUrl = `https://sheets.googleapis.com/v4/spreadsheets/${SHEETS_ID}/values/${TAB_KEYS}!A1:Z1000?key=${SHEETS_API_KEY}`;
+    const keysRes = await fetch(keysUrl);
+    if (keysRes.ok) {
+      const data = await keysRes.json();
+      const rows = data.values || [];
+      if (rows.length > 1) {
+        const headers = rows[0];
+        rows.slice(1).forEach(r => {
+          const projectId = r[headers.indexOf('project_id')];
+          const keyName = r[headers.indexOf('key_name')];
+          const keyValue = r[headers.indexOf('key_value')];
+          if (!projectId || !keyName) return;
+          const p = projects.find(x => x.id === projectId);
+          if (p) {
+            if (!p.keys) p.keys = {};
+            p.keys[keyName] = keyValue;
+          }
+        });
+      }
+    }
+    saveProjects();
+    setSheetsStatus('ok');
+    return true;
+  } catch(e) {
+    setSheetsStatus('error');
+    console.error('Sheets load error:', e);
+    return false;
+  }
+}
+
+async function saveToSheets(project) {
+  // Save via Apps Script if configured, otherwise show hint
+  const cfg = getConfig();
+  if (!cfg.appsScriptUrl) {
+    showToast('💡 Apps Script URL fehlt – Keys nur lokal gespeichert');
+    return;
+  }
+  try {
+    await fetch(cfg.appsScriptUrl, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        action: 'saveProject',
+        project: {
+          id: project.id, name: project.name,
+          repo: project.repo, desc: project.desc||'',
+          icon: project.icon||'🚀', created: project.created||''
+        },
+        keys: project.keys || {}
+      })
+    });
+  } catch(e) { console.error('Sheets save error:', e); }
+}
+
+function setSheetsStatus(state) {
+  const el = document.getElementById('sheetsStatusDot');
+  const lbl = document.getElementById('sheetsStatusLabel');
+  if (!el) return;
+  if (state === 'ok') {
+    el.style.background = 'var(--green)';
+    el.style.boxShadow = '0 0 6px var(--green)';
+    if (lbl) lbl.textContent = 'Sheets sync';
+  } else if (state === 'loading') {
+    el.style.background = 'var(--blue)';
+    el.style.boxShadow = 'none';
+    if (lbl) lbl.textContent = 'Syncing...';
+  } else {
+    el.style.background = 'var(--red)';
+    el.style.boxShadow = 'none';
+    if (lbl) lbl.textContent = 'Sheets offline';
+  }
+}
+
+// ── STATE ─────────────────────────────────────────────────────────────────
+let projects = [];
+let currentProjectId = null;
+let selectedEmoji = '🚀';
+
+const EMOJIS = ['🚀','⚡','🔧','📊','🏗️','🔑','📱','🖥️','⚙️','🌐','🔒','📋','🎯','💡','🛠️','📦','🏢','🤖','💎','🏭'];
+
+// ── INIT ──────────────────────────────────────────────────────────────────
+function init() {
+  loadData();
+  renderEmojiGrid();
+  updateTokenStatus();
+  renderProjectList();
+  const cfg = getConfig();
+  if (cfg.token) document.getElementById('tokenInput').value = cfg.token;
+  if (cfg.username) document.getElementById('usernameInput').value = cfg.username;
+  // Load from Google Sheets
+  loadFromSheets().then(() => {
+    renderProjectList();
+    if (currentProjectId) renderMain();
+  });
+}
+
+function getConfig() {
+  try { return JSON.parse(localStorage.getItem('gitdeploy_config') || '{}'); }
+  catch(e) { return {}; }
+}
+
+function saveConfig(cfg) {
+  localStorage.setItem('gitdeploy_config', JSON.stringify(cfg));
+}
+
+function loadData() {
+  try {
+    const s = localStorage.getItem('gitdeploy_projects');
+    if (s) projects = JSON.parse(s);
+    // Add default AppStudio project if empty
+    if (!projects.length) {
+      projects = [{
+        id: 'p_appstudio',
+        name: 'AppStudio',
+        repo: 'appstudio',
+        desc: 'Entwicklertool',
+        icon: '⚡',
+        versions: [],
+        created: new Date().toLocaleDateString('de-DE'),
+      }];
+      saveProjects();
+    }
+  } catch(e) { projects = []; }
+}
+
+function saveProjects() {
+  localStorage.setItem('gitdeploy_projects', JSON.stringify(projects));
+}
+
+// ── TOKEN ─────────────────────────────────────────────────────────────────
+function updateTokenStatus() {
+  const cfg = getConfig();
+  const dot = document.getElementById('tokenDot');
+  const label = document.getElementById('tokenLabel');
+  if (cfg.token && cfg.username) {
+    dot.className = 'token-dot ok';
+    label.textContent = cfg.username;
+  } else {
+    dot.className = 'token-dot';
+    label.textContent = 'Kein Token';
+  }
+}
+
+function openTokenModal() {
+  const cfg = getConfig();
+  document.getElementById('tokenInput').value = cfg.token || '';
+  document.getElementById('usernameInput').value = cfg.username || '';
+  document.getElementById('tokenOverlay').classList.add('open');
+}
+
+function closeTokenModal() {
+  document.getElementById('tokenOverlay').classList.remove('open');
+}
+
+function saveToken() {
+  const cfg = getConfig();
+  cfg.token = document.getElementById('tokenInput').value.trim();
+  cfg.username = document.getElementById('usernameInput').value.trim();
+  saveConfig(cfg);
+  updateTokenStatus();
+  closeTokenModal();
+  showToast('✅ Token gespeichert');
+}
+
+function toggleVis(id) {
+  const el = document.getElementById(id);
+  if (!el) return;
+  el.type = el.type === 'password' ? 'text' : 'password';
+}
+
+// ── PROJECT LIST ──────────────────────────────────────────────────────────
+function renderProjectList() {
+  const list = document.getElementById('projectList');
+  list.innerHTML = projects.map(p => {
+    const latestVer = p.versions?.length ? p.versions[p.versions.length-1].version : '–';
+    return `<div class="project-item ${p.id === currentProjectId ? 'active' : ''}" onclick="selectProject('${p.id}')">
+      <div class="project-emoji">${p.icon || '🚀'}</div>
+      <div class="project-info">
+        <div class="project-name">${p.name}</div>
+        <div class="project-repo">${p.repo}</div>
+      </div>
+      <div class="ver-badge">${latestVer}</div>
+    </div>`;
+  }).join('');
+}
+
+function toggleMobileSidebar() {
+  const sidebar = document.querySelector('.sidebar');
+  if (sidebar) sidebar.classList.toggle('mobile-open');
+}
+
+function selectProject(id) {
+  currentProjectId = id;
+  // Close mobile sidebar
+  const sidebar = document.querySelector('.sidebar');
+  if (sidebar) sidebar.classList.remove('mobile-open');
+  renderProjectList();
+  renderMain();
+}
+
+// ── MAIN CONTENT ──────────────────────────────────────────────────────────
+function renderMain() {
+  const project = projects.find(p => p.id === currentProjectId);
+  if (!project) return;
+  const cfg = getConfig();
+  const pagesUrl = cfg.username ? `https://${cfg.username}.github.io/${project.repo}` : '';
+
+  document.getElementById('mainContent').innerHTML = `
+    <div class="main-title">${project.icon} ${project.name}</div>
+    <div class="main-sub">// github.com/${cfg.username||'...'}/${project.repo} ${pagesUrl ? `· <a href="${pagesUrl}" target="_blank" style="color:var(--green);text-decoration:none;">${pagesUrl}</a>` : ''}</div>
+
+    <!-- Deploy Zone -->
+    <div class="deploy-zone">
+      <div class="deploy-zone-header">
+        <div class="zone-title">// Deploy</div>
+        <button onclick="toggleSettings()" style="background:none;border:1px solid var(--border2);color:var(--text2);border-radius:6px;padding:3px 10px;font-size:10px;font-family:var(--mono);cursor:pointer;">⚙ Einstellungen</button>
+      </div>
+      <div class="deploy-zone-body">
+
+        <!-- Settings panel -->
+        <div class="settings-panel" id="settingsPanel">
+          <div class="settings-header">
+            <div class="settings-title">Projekt Einstellungen</div>
+            <button class="close-btn" onclick="toggleSettings()">✕</button>
+          </div>
+          <div class="settings-body">
+            <div style="font-size:9px;font-family:var(--mono);color:var(--text3);text-transform:uppercase;letter-spacing:1px;margin-bottom:10px;padding-bottom:6px;border-bottom:1px solid var(--border);">Projekt Info</div>
+            <div class="field">
+              <label class="field-label">Projektname</label>
+              <input class="field-input" type="text" id="editName" value="${project.name}">
+            </div>
+            <div class="field">
+              <label class="field-label">GitHub Repository</label>
+              <input class="field-input" type="text" id="editRepo" value="${project.repo}">
+            </div>
+            <div class="field">
+              <label class="field-label">Beschreibung</label>
+              <input class="field-input" type="text" id="editDesc" value="${project.desc||''}">
+            </div>
+
+            <div style="font-size:9px;font-family:var(--mono);color:var(--text3);text-transform:uppercase;letter-spacing:1px;margin:14px 0 10px;padding-bottom:6px;border-bottom:1px solid var(--border);">🔑 API Keys</div>
+            ${[
+              {id:'anthropicKey', label:'Anthropic API Key', ph:'sk-ant-...', pw:true},
+              {id:'gSheetsKey', label:'Google Sheets API Key', ph:'AIza...', pw:true},
+              {id:'gSheetsId', label:'Google Sheets ID', ph:'1BxiMVs...', pw:false},
+              {id:'gDriveId', label:'Google Drive Ordner ID', ph:'1A2B3C...', pw:false},
+            ].map(k => `
+              <div class="field">
+                <label class="field-label">${k.label}</label>
+                <div style="display:flex;gap:6px;">
+                  <input class="field-input" type="${k.pw?'password':'text'}"
+                    id="key_${k.id}"
+                    placeholder="${k.ph}"
+                    value="${project.keys?.[k.id]||''}"
+                    style="flex:1;">
+                  ${k.pw ? `<button onclick="toggleVis('key_${k.id}')" style="padding:8px;border-radius:8px;border:1px solid var(--border2);background:var(--surface3);color:var(--text2);cursor:pointer;font-size:12px;">👁</button>` : ''}
+                </div>
+              </div>`).join('')}
+
+            <div style="display:flex;gap:8px;margin-top:8px;">
+              <button class="settings-save-btn" onclick="saveProjectSettings()">💾 Speichern & Sync</button>
+              <button onclick="deleteProject('${project.id}')" style="padding:10px 14px;border-radius:10px;border:1px solid rgba(255,82,82,0.3);background:transparent;color:var(--red);font-family:var(--sans);font-size:12px;cursor:pointer;">🗑</button>
+            </div>
+          </div>
+        </div>
+
+        <!-- File drop -->
+        <div class="file-drop" id="fileDrop" ondragover="handleDrag(event)" ondragleave="handleDragLeave(event)" ondrop="handleDrop(event)">
+          <input type="file" accept=".html" onchange="handleFileSelect(event)">
+          <div class="file-drop-icon">📄</div>
+          <div class="file-drop-text"><strong>HTML-Datei auswählen</strong> oder hierher ziehen</div>
+          <div class="file-drop-name" id="fileName"></div>
+        </div>
+
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:12px;">
+          <div>
+            <label style="font-size:9px;font-family:var(--mono);color:var(--text3);text-transform:uppercase;letter-spacing:0.5px;display:block;margin-bottom:4px;">Versionsnummer</label>
+            <input class="field-input" type="text" id="versionInput" placeholder="v1.0" style="width:100%;">
+          </div>
+          <div>
+            <label style="font-size:9px;font-family:var(--mono);color:var(--text3);text-transform:uppercase;letter-spacing:0.5px;display:block;margin-bottom:4px;">Changelog</label>
+            <input class="field-input" type="text" id="changelogInput" placeholder="Was wurde geändert?" style="width:100%;">
+          </div>
+        </div>
+
+        <button class="deploy-btn" id="deployBtn" onclick="deploy()">
+          🚀 Deployen
+        </button>
+
+        <div class="progress-wrap" id="progressWrap">
+          <div class="progress-label">
+            <span id="progressLabel">Vorbereitung...</span>
+            <span id="progressPct">0%</span>
+          </div>
+          <div class="progress-track"><div class="progress-fill" id="progressFill"></div></div>
+        </div>
+
+        <div class="status-box" id="statusBox"></div>
+      </div>
+    </div>
+
+    <!-- Version History -->
+    <div class="versions-box">
+      <div class="versions-header">// Versionsarchiv (${project.versions?.length || 0})</div>
+      ${renderVersionHistory(project)}
+    </div>`;
+}
+
+function renderVersionHistory(project) {
+  if (!project.versions?.length) {
+    return '<div class="empty-versions">Noch keine Versionen deployed</div>';
+  }
+  const cfg = getConfig();
+  return project.versions.slice().reverse().map((v, i) => {
+    const pagesUrl = cfg.username ? `https://${cfg.username}.github.io/${project.repo}` : '';
+    const ghUrl = cfg.username ? `https://github.com/${cfg.username}/${project.repo}/commits/main` : '';
+    return `<div class="version-row">
+      <div class="ver-num">${v.version}</div>
+      <div class="ver-details">
+        <div class="ver-note">${v.changelog || 'Kein Changelog'}</div>
+        <div class="ver-date">${v.date} · ${v.filename || 'index.html'}</div>
+        ${v.sha ? `<div class="ver-sha">SHA: ${v.sha.substring(0,7)}</div>` : ''}
+      </div>
+      ${i === 0 && pagesUrl ? `<a href="${pagesUrl}" target="_blank" class="ver-link">▶ Live</a>` : ''}
+      ${ghUrl ? `<a href="${ghUrl}" target="_blank" class="ver-link">GitHub</a>` : ''}
+    </div>`;
+  }).join('');
+}
+
+// ── FILE HANDLING ─────────────────────────────────────────────────────────
+let selectedFile = null;
+
+function handleFileSelect(e) {
+  const file = e.target.files[0];
+  if (file) setFile(file);
+}
+
+function handleDrag(e) {
+  e.preventDefault();
+  document.getElementById('fileDrop')?.classList.add('drag');
+}
+
+function handleDragLeave(e) {
+  document.getElementById('fileDrop')?.classList.remove('drag');
+}
+
+function handleDrop(e) {
+  e.preventDefault();
+  document.getElementById('fileDrop')?.classList.remove('drag');
+  const file = e.dataTransfer.files[0];
+  if (file && file.name.endsWith('.html')) setFile(file);
+}
+
+function setFile(file) {
+  selectedFile = file;
+  const el = document.getElementById('fileName');
+  if (el) el.textContent = '✓ ' + file.name;
+  // Auto-detect version from filename
+  const match = file.name.match(/v(\d+\.\d+)/i);
+  if (match) {
+    const vi = document.getElementById('versionInput');
+    if (vi && !vi.value) vi.value = 'v' + match[1];
+  }
+}
+
+// ── DEPLOY ────────────────────────────────────────────────────────────────
+async function deploy() {
+  const cfg = getConfig();
+  if (!cfg.token || !cfg.username) {
+    showStatus('⚠ Bitte zuerst GitHub Token einrichten (oben rechts)', 'err');
+    openTokenModal();
+    return;
+  }
+  if (!selectedFile) {
+    showStatus('⚠ Bitte zuerst eine HTML-Datei auswählen', 'err');
+    return;
+  }
+  const project = projects.find(p => p.id === currentProjectId);
+  if (!project) return;
+
+  const version = document.getElementById('versionInput')?.value?.trim() || 'v' + (project.versions.length + 1) + '.0';
+  const changelog = document.getElementById('changelogInput')?.value?.trim() || '';
+
+  setProgress(10, 'Lese Datei...');
+  showStatus('🔄 Deployment läuft...', 'loading');
+
+  try {
+    // Read file content
+    const content = await selectedFile.text();
+    const base64 = btoa(unescape(encodeURIComponent(content)));
+
+    setProgress(25, 'Prüfe Repository...');
+
+    // Check if repo exists, create if not
+    const repoCheck = await ghAPI(`/repos/${cfg.username}/${project.repo}`, 'GET', null, cfg.token);
+    if (!repoCheck.ok) {
+      setProgress(35, 'Erstelle Repository...');
+      const createRes = await ghAPI('/user/repos', 'POST', {
+        name: project.repo,
+        description: project.desc || project.name,
+        private: false,
+        auto_init: true,
+      }, cfg.token);
+      if (!createRes.ok) throw new Error('Repository konnte nicht erstellt werden: ' + createRes.data.message);
+      // Wait a moment for repo to initialize
+      await new Promise(r => setTimeout(r, 1500));
+    }
+
+    setProgress(50, 'Lade Datei hoch...');
+
+    // Get existing file SHA if exists
+    const existing = await ghAPI(`/repos/${cfg.username}/${project.repo}/contents/index.html`, 'GET', null, cfg.token);
+    const sha = existing.ok ? existing.data.sha : null;
+
+    // Upload file
+    const body = {
+      message: `Deploy ${version}${changelog ? ' – ' + changelog : ''} [${new Date().toLocaleDateString('de-DE')}]`,
+      content: base64,
+    };
+    if (sha) body.sha = sha;
+
+    const uploadRes = await ghAPI(`/repos/${cfg.username}/${project.repo}/contents/index.html`, 'PUT', body, cfg.token);
+    if (!uploadRes.ok) throw new Error(uploadRes.data.message || 'Upload fehlgeschlagen');
+
+    setProgress(75, 'Aktiviere GitHub Pages...');
+
+    // Enable GitHub Pages
+    const pagesRes = await ghAPI(`/repos/${cfg.username}/${project.repo}/pages`, 'POST', {
+      source: { branch: 'main', path: '/' }
+    }, cfg.token);
+    // Ignore if already enabled
+
+    setProgress(100, 'Fertig!');
+
+    // Save version to project
+    const newVersion = {
+      version,
+      changelog,
+      date: new Date().toLocaleDateString('de-DE'),
+      filename: selectedFile.name,
+      sha: uploadRes.data.content?.sha || '',
+      deployedAt: new Date().toISOString(),
+    };
+    if (!project.versions) project.versions = [];
+    project.versions.push(newVersion);
+    saveProjects();
+
+    const pagesUrl = `https://${cfg.username}.github.io/${project.repo}`;
+    showStatus(`✅ ${version} erfolgreich deployed!<br><br>🌐 ${pagesUrl}<br>⏳ GitHub Pages braucht 1-2 Minuten`, 'ok');
+    selectedFile = null;
+    const fn = document.getElementById('fileName');
+    if (fn) fn.textContent = '';
+    renderProjectList();
+    // Refresh versions section
+    const versBox = document.querySelector('.versions-box');
+    if (versBox) versBox.innerHTML = `<div class="versions-header">// Versionsarchiv (${project.versions.length})</div>${renderVersionHistory(project)}`;
+
+  } catch(e) {
+    setProgress(0, '');
+    showStatus('❌ ' + e.message, 'err');
+  }
+}
+
+async function ghAPI(path, method, body, token) {
+  const res = await fetch('https://api.github.com' + path, {
+    method: method || 'GET',
+    headers: {
+      'Authorization': 'token ' + token,
+      'Content-Type': 'application/json',
+      'Accept': 'application/vnd.github.v3+json',
+    },
+    body: body ? JSON.stringify(body) : undefined,
+  });
+  const data = await res.json();
+  return { ok: res.ok, status: res.status, data };
+}
+
+function setProgress(pct, label) {
+  const wrap = document.getElementById('progressWrap');
+  const fill = document.getElementById('progressFill');
+  const lbl = document.getElementById('progressLabel');
+  const pctEl = document.getElementById('progressPct');
+  if (!wrap) return;
+  wrap.style.display = 'block';
+  if (fill) fill.style.width = pct + '%';
+  if (lbl && label) lbl.textContent = label;
+  if (pctEl) pctEl.textContent = pct + '%';
+  if (pct === 0) wrap.style.display = 'none';
+}
+
+function showStatus(msg, type) {
+  const el = document.getElementById('statusBox');
+  if (!el) return;
+  el.style.display = 'block';
+  el.className = 'status-box ' + type;
+  el.innerHTML = msg;
+}
+
+// ── SETTINGS ──────────────────────────────────────────────────────────────
+function toggleSettings() {
+  const panel = document.getElementById('settingsPanel');
+  if (panel) panel.classList.toggle('open');
+}
+
+function saveProjectSettings() {
+  const project = projects.find(p => p.id === currentProjectId);
+  if (!project) return;
+  project.name = document.getElementById('editName')?.value?.trim() || project.name;
+  project.repo = document.getElementById('editRepo')?.value?.trim() || project.repo;
+  project.desc = document.getElementById('editDesc')?.value?.trim() || '';
+  if (!project.keys) project.keys = {};
+  ['anthropicKey','gSheetsKey','gSheetsId','gDriveId'].forEach(k => {
+    const val = document.getElementById('key_' + k)?.value?.trim();
+    if (val) project.keys[k] = val;
+    else delete project.keys[k];
+  });
+  saveProjects();
+  saveToSheets(project);
+  renderProjectList();
+  renderMain();
+  showToast('✅ Gespeichert & in Sheets synchronisiert');
+}
+
+function deleteProject(id) {
+  if (!confirm('Projekt wirklich löschen?')) return;
+  projects = projects.filter(p => p.id !== id);
+  saveProjects();
+  currentProjectId = null;
+  renderProjectList();
+  document.getElementById('mainContent').innerHTML = `<div class="empty-main"><div class="empty-main-icon">📂</div><div class="empty-main-title">Projekt auswählen</div><div class="empty-main-sub">← Wähle ein Projekt aus der Liste</div></div>`;
+  showToast('🗑 Projekt gelöscht');
+}
+
+// ── ADD PROJECT ────────────────────────────────────────────────────────────
+function openAddProject() {
+  document.getElementById('addOverlay').classList.add('open');
+}
+
+function closeAddProject() {
+  document.getElementById('addOverlay').classList.remove('open');
+  ['newName','newRepo','newDesc'].forEach(id => {
+    const el = document.getElementById(id); if (el) el.value = '';
+  });
+}
+
+function createProject() {
+  const name = document.getElementById('newName')?.value?.trim();
+  const repo = document.getElementById('newRepo')?.value?.trim();
+  if (!name || !repo) { showToast('⚠ Name & Repo Pflichtfelder'); return; }
+  const keys = {};
+  const anthropicKey = document.getElementById('newAnthropicKey')?.value?.trim();
+  const gSheetsKey = document.getElementById('newGSheetsKey')?.value?.trim();
+  const gSheetsId = document.getElementById('newGSheetsId')?.value?.trim();
+  const gDriveId = document.getElementById('newGDriveId')?.value?.trim();
+  if (anthropicKey) keys.anthropicKey = anthropicKey;
+  if (gSheetsKey) keys.gSheetsKey = gSheetsKey;
+  if (gSheetsId) keys.gSheetsId = gSheetsId;
+  if (gDriveId) keys.gDriveId = gDriveId;
+
+  const project = {
+    id: 'p_' + Date.now(),
+    name, repo,
+    desc: document.getElementById('newDesc')?.value?.trim() || '',
+    icon: selectedEmoji,
+    versions: [],
+    created: new Date().toLocaleDateString('de-DE'),
+    keys,
+  };
+  projects.unshift(project);
+  saveProjects();
+  saveToSheets(project);
+  closeAddProject();
+  renderProjectList();
+  selectProject(project.id);
+  showToast('✅ Projekt erstellt & in Sheets gespeichert');
+}
+
+// ── EMOJI ──────────────────────────────────────────────────────────────────
+function renderEmojiGrid() {
+  const grid = document.getElementById('emojiGrid');
+  if (!grid) return;
+  grid.innerHTML = EMOJIS.map(e =>
+    `<div class="emoji-opt ${e===selectedEmoji?'selected':''}" onclick="selectEmoji('${e}',this)">${e}</div>`
+  ).join('');
+}
+
+function selectEmoji(e, el) {
+  selectedEmoji = e;
+  document.querySelectorAll('.emoji-opt').forEach(x => x.classList.remove('selected'));
+  el.classList.add('selected');
+}
+
+// ── TOAST ──────────────────────────────────────────────────────────────────
+function showToast(msg) {
+  const t = document.getElementById('toast');
+  t.textContent = msg; t.classList.add('show');
+  setTimeout(() => t.classList.remove('show'), 2500);
+}
+
+// ── BACKDROP CLOSE ────────────────────────────────────────────────────────
+['tokenOverlay','addOverlay'].forEach(id => {
+  const el = document.getElementById(id);
+  if (el) el.addEventListener('click', function(e) {
+    if (e.target === this) {
+      if (id === 'tokenOverlay') closeTokenModal();
+      else closeAddProject();
+    }
+  });
+});
+
+// Pre-fill token from memory - runs BEFORE init
+(function() {
+  const cfg = JSON.parse(localStorage.getItem('gitdeploy_config') || '{}');
+  if (!cfg.token) {
+    localStorage.setItem('gitdeploy_config', JSON.stringify({
+      token: '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',
+      username: 'giltglobalinvest-pixel',
+    }));
+  }
+})();
+
+init();
+</script>
+</body>
+</html>
