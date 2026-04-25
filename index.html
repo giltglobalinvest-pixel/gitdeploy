@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
-<title>GitDeploy v1.5</title>
+<title>GitDeploy v1.6</title>
 <link href="https://fonts.googleapis.com/css2?family=DM+Mono:wght@400;500&family=Bricolage+Grotesque:wght@400;600;700;800&display=swap" rel="stylesheet">
 <style>
 :root {
@@ -539,7 +539,7 @@ body::after {
   <div class="logo">
     <button onclick="toggleMobileSidebar()" class="mobile-menu-btn" style="display:none;background:var(--surface2);border:1px solid var(--border2);color:var(--text);border-radius:8px;padding:6px 10px;font-size:16px;cursor:pointer;margin-right:8px;">☰</button>
     <div class="logo-mark">🚀</div>
-    <div class="logo-name">Git<span>Deploy</span> <span style="font-size:9px;color:var(--text3);font-family:var(--mono);">v1.5</span></div>
+    <div class="logo-name">Git<span>Deploy</span> <span style="font-size:9px;color:var(--text3);font-family:var(--mono);">v1.6</span></div>
   </div>
   <div class="token-status">
     <div class="token-dot" id="sheetsStatusDot" style="background:var(--text3);"></div>
@@ -726,17 +726,11 @@ async function testAppsScript() {
   result.style.color='var(--blue)';
   result.textContent='🔄 Teste Verbindung...';
   try {
-    const res = await fetch(url);
-    const data = await res.json();
-    if (data.ok) {
-      result.style.background='rgba(0,230,118,0.1)';
-      result.style.color='var(--green)';
-      result.textContent='✅ Apps Script aktiv!';
-    } else {
-      result.style.background='rgba(255,82,82,0.1)';
-      result.style.color='var(--red)';
-      result.textContent='❌ ' + (data.error||'Fehler');
-    }
+      // Use no-cors for test - if no error thrown, script is reachable
+    await fetch(url, { method: 'POST', mode: 'no-cors', headers: { 'Content-Type': 'text/plain' }, body: JSON.stringify({action:'test'}) });
+    result.style.background='rgba(0,230,118,0.1)';
+    result.style.color='var(--green)';
+    result.textContent='✅ Apps Script erreichbar!';
   } catch(e) {
     result.style.background='rgba(255,82,82,0.1)';
     result.style.color='var(--red)';
@@ -850,9 +844,11 @@ async function saveToSheets(project) {
     return;
   }
   try {
-    const res = await fetch(cfg.appsScriptUrl, {
+    // Use no-cors to bypass CORS restriction - we dont need the response
+    await fetch(cfg.appsScriptUrl, {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+      mode: 'no-cors',
+      headers: { 'Content-Type': 'text/plain' },
       body: JSON.stringify({
         action: 'saveProject',
         sheetId: cfg.gSheetsId,
@@ -867,7 +863,8 @@ async function saveToSheets(project) {
     if (project.keys && Object.keys(project.keys).length > 0) {
       await fetch(cfg.appsScriptUrl, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        mode: 'no-cors',
+        headers: { 'Content-Type': 'text/plain' },
         body: JSON.stringify({
           action: 'saveKeys',
           sheetId: cfg.gSheetsId,
