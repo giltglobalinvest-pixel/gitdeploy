@@ -2289,6 +2289,29 @@ function renderMain() {
   if (proj && !proj._tables) loadProjectTables(proj);
 }
 
+// Lädt eine Version-HTML herunter (von GitHub via fetch, dann als lokaler Download)
+async function downloadVersion(url, filename) {
+  showToast('📥 Lade ' + filename + '...');
+  try {
+    const res = await fetch(url);
+    if (!res.ok) throw new Error('HTTP ' + res.status);
+    const html = await res.text();
+    const blob = new Blob([html], { type: 'text/html' });
+    const blobUrl = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = blobUrl;
+    a.download = filename;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(blobUrl);
+    showToast('✅ ' + filename + ' gespeichert');
+  } catch(e) {
+    console.error('Download error:', e);
+    showToast('⚠ Download fehlgeschlagen: ' + e.message);
+  }
+}
+
 function renderVersionHistory(project) {
   if (!project.versions?.length) {
     return '<div class="empty-versions">Noch keine Versionen deployed</div>';
@@ -2297,28 +2320,38 @@ function renderVersionHistory(project) {
   return project.versions.slice().reverse().map((v, i) => {
     const pagesUrl = v.pagesUrl || (cfg.username ? `https://${cfg.username}.github.io/${project.repo}` : '');
     const ghCommitsUrl = cfg.username ? `https://github.com/${cfg.username}/${project.repo}/commits/main` : '';
-    const filename = v.filename || 'index.html';
-    // Raw URL für direktes Öffnen im Browser (vom GitHub CDN, läuft sofort)
-    const rawUrl = v.rawUrl || (cfg.username && v.sha
-      ? `https://raw.githubusercontent.com/${cfg.username}/${project.repo}/${v.sha}/${filename}`
-      : (cfg.username ? `https://raw.githubusercontent.com/${cfg.username}/${project.repo}/main/${filename}` : ''));
-    // RawGit-ähnlicher Service der HTML als HTML serviert (raw.githack.com)
-    const liveRunUrl = v.sha && cfg.username
-      ? `https://raw.githack.com/${cfg.username}/${project.repo}/${v.sha}/${filename}`
-      : (cfg.username ? `https://raw.githack.com/${cfg.username}/${project.repo}/main/${filename}` : '');
+    // Originaler Dateiname (zur Anzeige für den User)
+    const displayName = v.filename || 'index.html';
+    // GitHub speichert die Datei IMMER als index.html (siehe deployFile)
+    const ghFilename = 'index.html';
+    // Download URL: Bei der neuesten Version (isLatest) nutzen wir 'main' branch
+    // (immer verfügbar, auch wenn alter SHA verloren ging)
+    // Bei alten Versionen den SHA (falls vorhanden)
     const isLatest = i === 0;
+    const rawUrl = cfg.username
+      ? (isLatest || !v.sha
+          ? `https://raw.githubusercontent.com/${cfg.username}/${project.repo}/main/${ghFilename}`
+          : `https://raw.githubusercontent.com/${cfg.username}/${project.repo}/${v.sha}/${ghFilename}`)
+      : '';
+    // Live-Run URL via raw.githack.com (rendert HTML als HTML)
+    const liveRunUrl = cfg.username
+      ? (isLatest || !v.sha
+          ? `https://raw.githack.com/${cfg.username}/${project.repo}/main/${ghFilename}`
+          : `https://raw.githack.com/${cfg.username}/${project.repo}/${v.sha}/${ghFilename}`)
+      : '';
 
     return `<div class="version-row" style="${isLatest ? 'border-left:3px solid var(--green);padding-left:10px;' : ''}">
       <div class="ver-num">${v.version}${isLatest ? ' <span style="font-size:8px;color:var(--green);font-family:var(--mono);">LIVE</span>' : ''}</div>
       <div class="ver-details">
         <div class="ver-note">${v.changelog || 'Kein Changelog'}</div>
-        <div class="ver-date">${v.date} · ${filename}</div>
+        <div class="ver-date">${v.date} · ${displayName}</div>
         ${v.sha ? `<div class="ver-sha">SHA: ${v.sha.substring(0,7)}</div>` : ''}
       </div>
       <div style="display:flex;flex-direction:column;gap:4px;">
         ${isLatest && pagesUrl ? `<a href="${pagesUrl}" target="_blank" class="ver-link" style="background:rgba(0,230,118,0.1);color:var(--green);border-color:var(--green);">▶ Live (Pages)</a>` : ''}
         ${liveRunUrl ? `<a href="${liveRunUrl}" target="_blank" class="ver-link" title="Diese Version direkt im Browser starten">⚡ Diese Version öffnen</a>` : ''}
-        ${rawUrl ? `<a href="${rawUrl}" target="_blank" download="${filename}" class="ver-link" title="HTML-Datei herunterladen">📥 Download</a>` : ''}
+        ${rawUrl ? `<button onclick="copyToClipboard('${rawUrl}')" class="ver-link" style="background:rgba(68,138,255,0.1);color:var(--blue);border-color:var(--blue);cursor:pointer;text-align:center;" title="Link zum Source-Code kopieren – für Claude-Projekte">🔗 Code-Link kopieren</button>` : ''}
+        ${rawUrl ? `<a href="javascript:void(0)" onclick="downloadVersion('${rawUrl}','${displayName.replace(/'/g, "\\'")}'); return false;" class="ver-link" title="HTML-Datei herunterladen">📥 Download</a>` : ''}
       </div>
     </div>`;
   }).join('');
@@ -2430,14 +2463,15 @@ async function deploy() {
     setProgress(100, 'Fertig!');
 
     // GitHub URLs für die Version berechnen
+    // WICHTIG: Datei wurde immer als 'index.html' hochgeladen (siehe Zeile 2419)
+    // Der ursprüngliche Dateiname wird nur als Anzeige für den User gespeichert
     const newSha = uploadRes.data.content?.sha || '';
     const pagesUrl = `https://${cfg.username}.github.io/${project.repo}`;
-    // Direct file URL (immer aktuell - latest)
-    const githubFileUrl = `https://github.com/${cfg.username}/${project.repo}/blob/main/${selectedFile.name}`;
+    const githubFileUrl = `https://github.com/${cfg.username}/${project.repo}/blob/main/index.html`;
     // Raw URL (zum lokalen Öffnen) - per SHA für versionsspezifisch
     const rawUrl = newSha
-      ? `https://raw.githubusercontent.com/${cfg.username}/${project.repo}/${newSha}/${selectedFile.name}`
-      : `https://raw.githubusercontent.com/${cfg.username}/${project.repo}/main/${selectedFile.name}`;
+      ? `https://raw.githubusercontent.com/${cfg.username}/${project.repo}/${newSha}/index.html`
+      : `https://raw.githubusercontent.com/${cfg.username}/${project.repo}/main/index.html`;
 
     // Save version to project
     const newVersion = {
@@ -3431,6 +3465,16 @@ function generateInstructionText(project) {
     '- Du gibst mir die neue komplette HTML zurück',
     '- Erhöhe die `APP_VERSION` (z.B. v1.0 → v1.1)',
     '- Ich deploye die neue Version – User bekommen automatisch das Update über den Loader',
+    '',
+    '## 💡 Tipp: Bestehenden Code laden statt hochladen',
+    '',
+    'Falls die Datei zu groß ist und ich sie nicht in den Chat einfügen kann, gebe ich dir stattdessen einen **Link zum Code auf GitHub**. Du kannst ihn dann via `web_fetch` direkt holen:',
+    '',
+    '```',
+    'https://raw.githubusercontent.com/' + username + '/' + project.repo + '/main/index.html',
+    '```',
+    '',
+    'Ich kann diesen Link auch über GitDeploy mit dem Button **🔗 Code-Link kopieren** holen.',
     '',
     '---',
     '',
