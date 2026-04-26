@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
-<title>GitDeploy v1.9</title>
+<title>GitDeploy v2.0 · Airtable</title>
 <link href="https://fonts.googleapis.com/css2?family=DM+Mono:wght@400;500&family=Bricolage+Grotesque:wght@400;600;700;800&display=swap" rel="stylesheet">
 <style>
 :root {
@@ -675,11 +675,11 @@ body::after {
   <div class="logo">
     <button onclick="toggleMobileSidebar()" class="mobile-menu-btn" style="display:none;background:var(--surface2);border:1px solid var(--border2);color:var(--text);border-radius:8px;padding:6px 10px;font-size:16px;cursor:pointer;margin-right:8px;">☰</button>
     <div class="logo-mark">🚀</div>
-    <div class="logo-name">Git<span>Deploy</span> <span style="font-size:9px;color:var(--text3);font-family:var(--mono);">v1.9</span></div>
+    <div class="logo-name">Git<span>Deploy</span> <span style="font-size:9px;color:var(--text3);font-family:var(--mono);">v2.0</span></div>
   </div>
   <div class="token-status">
-    <div class="token-dot" id="sheetsStatusDot" style="background:var(--text3);"></div>
-    <span id="sheetsStatusLabel" style="margin-right:10px;">Sheets</span>
+    <div class="token-dot" id="airtableStatusDot" style="background:var(--text3);"></div>
+    <span id="airtableStatusLabel" style="margin-right:10px;">Airtable</span>
     <div class="token-dot" id="tokenDot"></div>
     <span id="tokenLabel">Kein Token</span>
     <button onclick="openTokenModal()" style="margin-left:8px;background:var(--surface2);border:1px solid var(--border2);color:var(--text2);border-radius:6px;padding:3px 8px;font-size:10px;font-family:var(--mono);cursor:pointer;">⚙</button>
@@ -730,38 +730,24 @@ body::after {
       </div>
     </div>
 
-    <!-- Google Section -->
+    <!-- Airtable Section -->
     <div style="background:var(--surface2);border:1px solid var(--border);border-radius:12px;padding:14px;margin-bottom:14px;">
-      <div style="font-size:9px;font-family:var(--mono);color:var(--text3);text-transform:uppercase;letter-spacing:1px;margin-bottom:12px;">📊 Google Workspace</div>
+      <div style="font-size:9px;font-family:var(--mono);color:var(--text3);text-transform:uppercase;letter-spacing:1px;margin-bottom:12px;">🗂 Airtable</div>
       <div class="field">
-        <label class="field-label">Google Sheets API Key</label>
+        <label class="field-label">Airtable API Key (Personal Access Token)</label>
         <div class="field-row">
-          <input class="field-input" type="password" id="gSheetsKeyInput" placeholder="AIza...">
-          <button onclick="toggleVis('gSheetsKeyInput')" style="padding:9px 12px;border-radius:8px;border:1px solid var(--border2);background:var(--surface2);color:var(--text2);cursor:pointer;font-size:13px;">👁</button>
+          <input class="field-input" type="password" id="airtableKeyInput" placeholder="pat...">
+          <button onclick="toggleVis('airtableKeyInput')" style="padding:9px 12px;border-radius:8px;border:1px solid var(--border2);background:var(--surface2);color:var(--text2);cursor:pointer;font-size:13px;">👁</button>
         </div>
+        <div style="font-size:9px;color:var(--text3);font-family:var(--mono);margin-top:4px;">airtable.com → Account → Developer hub → Personal access tokens</div>
       </div>
       <div class="field">
-        <label class="field-label">Google Sheets ID</label>
-        <input class="field-input" type="text" id="gSheetsIdInput" placeholder="1BxiMVs...">
+        <label class="field-label">Airtable Base ID</label>
+        <input class="field-input" type="text" id="airtableBaseInput" placeholder="appXXXXXXXXXXXXXX">
+        <div style="font-size:9px;color:var(--text3);font-family:var(--mono);margin-top:4px;">In Airtable: Help → API Documentation → Base-ID kopieren</div>
       </div>
-      <div class="field">
-        <label class="field-label">Google Drive Ordner ID</label>
-        <input class="field-input" type="text" id="gDriveIdInput" placeholder="1A2B3C...">
-      </div>
-      <div id="sheetsTestResult" style="display:none;margin-top:8px;font-size:11px;font-family:var(--mono);padding:8px;border-radius:8px;"></div>
-      <button onclick="testSheetsConnection()" style="width:100%;margin-top:8px;padding:8px;border-radius:8px;border:1px solid var(--border2);background:var(--surface3);color:var(--text2);font-family:var(--mono);font-size:11px;cursor:pointer;">🔌 Verbindung testen</button>
-    </div>
-
-    <!-- Apps Script -->
-    <div style="background:var(--surface2);border:1px solid var(--border);border-radius:12px;padding:14px;margin-bottom:14px;">
-      <div style="font-size:9px;font-family:var(--mono);color:var(--text3);text-transform:uppercase;letter-spacing:1px;margin-bottom:12px;">⚡ Google Apps Script (Schreibzugriff)</div>
-      <div class="field">
-        <label class="field-label">Apps Script URL</label>
-        <input class="field-input" type="text" id="appsScriptInput" placeholder="https://script.google.com/macros/s/...">
-        <div style="font-size:9px;color:var(--text3);font-family:var(--mono);margin-top:4px;">Einmalig einrichten → danach automatisches Speichern in Sheets</div>
-      </div>
-      <div id="appsScriptTestResult" style="display:none;margin-top:8px;font-size:11px;font-family:var(--mono);padding:8px;border-radius:8px;"></div>
-      <button onclick="testAppsScript()" style="width:100%;margin-top:8px;padding:8px;border-radius:8px;border:1px solid var(--border2);background:var(--surface3);color:var(--text2);font-family:var(--mono);font-size:11px;cursor:pointer;">🔌 Apps Script testen</button>
+      <div id="airtableTestResult" style="display:none;margin-top:8px;font-size:11px;font-family:var(--mono);padding:8px;border-radius:8px;"></div>
+      <button onclick="testAirtableConnection()" style="width:100%;margin-top:8px;padding:8px;border-radius:8px;border:1px solid var(--border2);background:var(--surface3);color:var(--text2);font-family:var(--mono);font-size:11px;cursor:pointer;">🔌 Verbindung testen</button>
     </div>
 
     <div class="modal-actions">
@@ -792,30 +778,21 @@ body::after {
       <label class="field-label">Icon</label>
       <div class="emoji-grid" id="emojiGrid"></div>
     </div>
-    <!-- API Keys -->
+    <!-- Project-specific Keys -->
     <div style="background:var(--surface2);border:1px solid var(--border);border-radius:12px;padding:14px;margin-top:4px;margin-bottom:12px;">
-      <div style="font-size:9px;font-family:var(--mono);color:var(--text3);text-transform:uppercase;letter-spacing:1px;margin-bottom:12px;">🔑 API Keys (optional – später ergänzbar)</div>
+      <div style="font-size:9px;font-family:var(--mono);color:var(--text3);text-transform:uppercase;letter-spacing:1px;margin-bottom:12px;">🔑 Projekt-spezifische Keys (optional)</div>
       <div class="field">
         <label class="field-label">Anthropic API Key</label>
         <div style="display:flex;gap:6px;">
           <input class="field-input" type="password" id="newAnthropicKey" placeholder="sk-ant-..." style="flex:1;">
           <button onclick="toggleVis('newAnthropicKey')" style="padding:8px;border-radius:8px;border:1px solid var(--border2);background:var(--surface3);color:var(--text2);cursor:pointer;">👁</button>
         </div>
+        <div style="font-size:9px;color:var(--text3);font-family:var(--mono);margin-top:4px;">Falls die App KI-Funktionen nutzt</div>
       </div>
       <div class="field">
-        <label class="field-label">Google Sheets API Key</label>
-        <div style="display:flex;gap:6px;">
-          <input class="field-input" type="password" id="newGSheetsKey" placeholder="AIza..." style="flex:1;" value="AIzaSyA_J2QlUxNnzdrsWOMJAunJY2hjHagY92s">
-          <button onclick="toggleVis('newGSheetsKey')" style="padding:8px;border-radius:8px;border:1px solid var(--border2);background:var(--surface3);color:var(--text2);cursor:pointer;">👁</button>
-        </div>
-      </div>
-      <div class="field">
-        <label class="field-label">Google Sheets ID</label>
-        <input class="field-input" type="text" id="newGSheetsId" placeholder="1BxiMVs..." value="1-SE0GAXgqrfoK0n9kH79cl5IcKygAcH-_fyktngIuBg">
-      </div>
-      <div class="field">
-        <label class="field-label">Google Drive Ordner ID</label>
-        <input class="field-input" type="text" id="newGDriveId" placeholder="1A2B3C..." value="12qk_kdFiHhc1z5Vt67jqAX0vK6kw0x4b">
+        <label class="field-label">Airtable Tabellen-Name (optional)</label>
+        <input class="field-input" type="text" id="newAirtableTable" placeholder="z.B. Notizen">
+        <div style="font-size:9px;color:var(--text3);font-family:var(--mono);margin-top:4px;">Falls die App eine eigene Tabelle in der Base hat</div>
       </div>
     </div>
 
@@ -834,204 +811,219 @@ body::after {
 <div class="toast" id="toast"></div>
 
 <script>
-// ── SHEETS CONFIG ─────────────────────────────────────────────────────────
-// Keys loaded dynamically from settings
-const TAB_PROJECTS = 'GitDeploy_Projekte';
-const TAB_KEYS = 'GitDeploy_Keys';
-const TAB_VERSIONS = 'GitDeploy_Versionen';
+// ── AIRTABLE CONFIG ───────────────────────────────────────────────────────
+const TABLE_PROJECTS = 'Projekte';
+const TABLE_KEYS = 'Keys';
+const TABLE_VERSIONS = 'Versionen';
+const TABLE_USERS = 'User';
 
-function getSheetsConfig() {
+function getAirtableConfig() {
   const cfg = getConfig();
   return {
-    apiKey: cfg.gSheetsKey || '',
-    sheetsId: cfg.gSheetsId || '',
-    driveId: cfg.gDriveId || '',
+    apiKey: cfg.airtableKey || '',
+    baseId: cfg.airtableBase || '',
   };
 }
 
-
-
-async function testAppsScript() {
-  const url = document.getElementById('appsScriptInput').value.trim();
-  const result = document.getElementById('appsScriptTestResult');
-  if (!url) {
-    result.style.display='block';
-    result.style.background='rgba(255,82,82,0.1)';
-    result.style.color='var(--red)';
-    result.textContent='⚠ Bitte URL eingeben';
-    return;
+async function airtableRequest(table, options = {}) {
+  const ac = getAirtableConfig();
+  if (!ac.apiKey || !ac.baseId) throw new Error('Airtable nicht konfiguriert');
+  const url = `https://api.airtable.com/v0/${ac.baseId}/${encodeURIComponent(table)}${options.path || ''}`;
+  const res = await fetch(url, {
+    method: options.method || 'GET',
+    headers: {
+      'Authorization': 'Bearer ' + ac.apiKey,
+      'Content-Type': 'application/json',
+    },
+    body: options.body ? JSON.stringify(options.body) : undefined,
+  });
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({}));
+    throw new Error(err.error?.message || `Airtable ${res.status}`);
   }
-  result.style.display='block';
-  result.style.background='rgba(68,138,255,0.1)';
-  result.style.color='var(--blue)';
-  result.textContent='🔄 Teste Verbindung...';
-  try {
-      const testUrl = url + '?action=test';
-    const res = await fetch(testUrl);
-    const data = await res.json();
-    result.style.background='rgba(0,230,118,0.1)';
-    result.style.color='var(--green)';
-    result.textContent='✅ Apps Script aktiv: ' + (data.status||'OK');
-  } catch(e) {
-    result.style.background='rgba(255,82,82,0.1)';
-    result.style.color='var(--red)';
-    result.textContent='❌ Verbindung fehlgeschlagen';
-  }
+  return res.json();
 }
 
-async function testSheetsConnection() {
-  const key = document.getElementById('gSheetsKeyInput').value.trim();
-  const id = document.getElementById('gSheetsIdInput').value.trim();
-  const result = document.getElementById('sheetsTestResult');
-  if (!key || !id) { 
-    result.style.display='block';
-    result.style.background='rgba(255,82,82,0.1)';
-    result.style.color='var(--red)';
-    result.textContent='⚠ Bitte Key & ID eingeben';
-    return; 
-  }
-  result.style.display='block';
-  result.style.background='rgba(68,138,255,0.1)';
-  result.style.color='var(--blue)';
-  result.textContent='🔄 Teste Verbindung...';
-  try {
-    const url = `https://sheets.googleapis.com/v4/spreadsheets/${id}?key=${key}`;
-    const res = await fetch(url);
-    if (res.ok) {
-      const data = await res.json();
-      result.style.background='rgba(0,230,118,0.1)';
-      result.style.color='var(--green)';
-      result.textContent=`✅ Verbunden: "${data.properties?.title||'Unbekannt'}"`;
-    } else {
-      const err = await res.json();
-      result.style.background='rgba(255,82,82,0.1)';
-      result.style.color='var(--red)';
-      result.textContent='❌ ' + (err.error?.message||'Verbindung fehlgeschlagen');
-    }
-  } catch(e) {
-    result.style.background='rgba(255,82,82,0.1)';
-    result.style.color='var(--red)';
-    result.textContent='❌ Netzwerkfehler – bitte über GitHub Pages öffnen';
-  }
-}
 
-async function loadFromSheets() {
+
+async function loadFromAirtable() {
+  const ac = getAirtableConfig();
+  if (!ac.apiKey || !ac.baseId) {
+    setAirtableStatus('off');
+    return false;
+  }
+  setAirtableStatus('loading');
   try {
-    setSheetsStatus('loading');
     // Load projects
-    const sc = getSheetsConfig();
-  if (!sc.apiKey || !sc.sheetsId) { setSheetsStatus('error'); return false; }
-  const projUrl = `https://sheets.googleapis.com/v4/spreadsheets/${sc.sheetsId}/values/${TAB_PROJECTS}!A1:Z1000?key=${sc.apiKey}`;
-    const projRes = await fetch(projUrl);
-    if (projRes.ok) {
-      const data = await projRes.json();
-      const rows = data.values || [];
-      if (rows.length > 1) {
-        const headers = rows[0];
-        const sheetProjects = rows.slice(1).map(r => {
-          const obj = {};
-          headers.forEach((h, i) => obj[h] = r[i] || '');
-          return obj;
-        }).filter(p => p.id);
-        // Merge with local
-        sheetProjects.forEach(sp => {
-          const local = projects.find(p => p.id === sp.id);
-          if (!local) {
-            projects.push({
-              id: sp.id, name: sp.name, repo: sp.repo,
-              desc: sp.desc||'', icon: sp.icon||'🚀',
-              versions: [], created: sp.created||'',
-              keys: {}
+    const projData = await airtableRequest(TABLE_PROJECTS).catch(e => null);
+    if (projData?.records) {
+      projData.records.forEach(rec => {
+        const f = rec.fields;
+        if (!f.id) return;
+        const local = projects.find(p => p.id === f.id);
+        if (!local) {
+          projects.push({
+            id: f.id,
+            name: f.name || '',
+            repo: f.repo || '',
+            desc: f.desc || '',
+            icon: f.icon || '🚀',
+            archived: f.archived === true || f.archived === 'true',
+            versions: [],
+            created: f.created || '',
+            keys: {},
+            users: [],
+            airtableRecordId: rec.id,
+          });
+        } else {
+          local.airtableRecordId = rec.id;
+        }
+      });
+    }
+
+    // Load keys
+    const keysData = await airtableRequest(TABLE_KEYS).catch(e => null);
+    if (keysData?.records) {
+      keysData.records.forEach(rec => {
+        const f = rec.fields;
+        if (!f.project_id || !f.key_name) return;
+        const p = projects.find(x => x.id === f.project_id);
+        if (p) {
+          if (!p.keys) p.keys = {};
+          p.keys[f.key_name] = f.key_value || '';
+        }
+      });
+    }
+
+    // Load users
+    const usersData = await airtableRequest(TABLE_USERS).catch(e => null);
+    if (usersData?.records) {
+      usersData.records.forEach(rec => {
+        const f = rec.fields;
+        if (!f.project_id || !f.api_key) return;
+        const p = projects.find(x => x.id === f.project_id);
+        if (p) {
+          if (!p.users) p.users = [];
+          if (!p.users.find(u => u.key === f.api_key)) {
+            p.users.push({
+              key: f.api_key,
+              name: f.name || '',
+              role: f.role || 'user',
+              status: f.status || 'aktiv',
+              created: f.created || '',
+              airtableRecordId: rec.id,
             });
           }
-        });
-      }
+        }
+      });
     }
-    // Load keys
-    const keysUrl = `https://sheets.googleapis.com/v4/spreadsheets/${sc.sheetsId}/values/${TAB_KEYS}!A1:Z1000?key=${sc.apiKey}`;
-    const keysRes = await fetch(keysUrl);
-    if (keysRes.ok) {
-      const data = await keysRes.json();
-      const rows = data.values || [];
-      if (rows.length > 1) {
-        const headers = rows[0];
-        rows.slice(1).forEach(r => {
-          const projectId = r[headers.indexOf('project_id')];
-          const keyName = r[headers.indexOf('key_name')];
-          const keyValue = r[headers.indexOf('key_value')];
-          if (!projectId || !keyName) return;
-          const p = projects.find(x => x.id === projectId);
-          if (p) {
-            if (!p.keys) p.keys = {};
-            p.keys[keyName] = keyValue;
-          }
-        });
-      }
-    }
+
     saveProjects();
-    setSheetsStatus('ok');
+    setAirtableStatus('ok');
     return true;
   } catch(e) {
-    setSheetsStatus('error');
-    console.error('Sheets load error:', e);
+    setAirtableStatus('error');
+    console.error('Airtable load error:', e);
+    showToast('⚠ Airtable: ' + e.message);
     return false;
   }
 }
 
-async function saveToSheets(project) {
-  const cfg = getConfig();
-  if (!cfg.appsScriptUrl) {
-    showToast('💡 Apps Script URL in Einstellungen eintragen');
+async function saveProjectToAirtable(project) {
+  const ac = getAirtableConfig();
+  if (!ac.apiKey || !ac.baseId) {
+    showToast('💡 Airtable in Einstellungen konfigurieren');
     return;
   }
+  setAirtableStatus('loading');
   try {
-    // Use GET request - no CORS issues!
-    const projectData = encodeURIComponent(JSON.stringify({
-      id: project.id, name: project.name,
-      repo: project.repo, desc: project.desc||'',
-      icon: project.icon||'🚀', created: project.created||''
-    }));
-    const url1 = `${cfg.appsScriptUrl}?action=saveProject&sheetId=${cfg.gSheetsId}&data=${projectData}`;
-    const res1 = await fetch(url1);
-    const data1 = await res1.json();
-    
-    // Save keys separately
-    if (project.keys && Object.keys(project.keys).length > 0) {
-      const keysData = encodeURIComponent(JSON.stringify({
-        projectId: project.id,
-        keys: project.keys
-      }));
-      const url2 = `${cfg.appsScriptUrl}?action=saveKeys&sheetId=${cfg.gSheetsId}&data=${keysData}`;
-      await fetch(url2);
+    const fields = {
+      id: project.id,
+      name: project.name,
+      repo: project.repo,
+      desc: project.desc || '',
+      icon: project.icon || '🚀',
+      archived: !!project.archived,
+      created: project.created || '',
+    };
+
+    if (project.airtableRecordId) {
+      // Update
+      await airtableRequest(TABLE_PROJECTS, {
+        method: 'PATCH',
+        path: '/' + project.airtableRecordId,
+        body: { fields }
+      });
+    } else {
+      // Create
+      const res = await airtableRequest(TABLE_PROJECTS, {
+        method: 'POST',
+        body: { fields }
+      });
+      if (res?.id) {
+        project.airtableRecordId = res.id;
+        saveProjects();
+      }
     }
-    
-    setSheetsStatus('ok');
-    showToast('✅ In Google Sheets gespeichert!');
+
+    // Save keys
+    if (project.keys) {
+      for (const [keyName, keyValue] of Object.entries(project.keys)) {
+        if (!keyValue) continue;
+        await airtableRequest(TABLE_KEYS, {
+          method: 'POST',
+          body: { fields: {
+            project_id: project.id,
+            key_name: keyName,
+            key_value: keyValue,
+          }}
+        }).catch(e => console.error('Key save error:', e));
+      }
+    }
+
+    setAirtableStatus('ok');
+    showToast('✅ In Airtable gespeichert!');
   } catch(e) {
-    console.error('Sheets save error:', e);
-    setSheetsStatus('error');
-    showToast('⚠ Sheets Fehler: ' + e.message);
+    console.error('Airtable save error:', e);
+    setAirtableStatus('error');
+    showToast('⚠ Airtable Fehler: ' + e.message);
   }
 }
 
-function setSheetsStatus(state) {
-  const el = document.getElementById('sheetsStatusDot');
-  const lbl = document.getElementById('sheetsStatusLabel');
+async function deleteProjectFromAirtable(project) {
+  if (!project?.airtableRecordId) return;
+  try {
+    await airtableRequest(TABLE_PROJECTS, {
+      method: 'DELETE',
+      path: '/' + project.airtableRecordId,
+    });
+  } catch(e) { console.error('Airtable delete error:', e); }
+}
+
+function setAirtableStatus(state) {
+  const el = document.getElementById('airtableStatusDot');
+  const lbl = document.getElementById('airtableStatusLabel');
   if (!el) return;
   if (state === 'ok') {
     el.style.background = 'var(--green)';
     el.style.boxShadow = '0 0 6px var(--green)';
-    if (lbl) lbl.textContent = 'Sheets sync';
+    if (lbl) lbl.textContent = 'Airtable';
   } else if (state === 'loading') {
     el.style.background = 'var(--blue)';
     el.style.boxShadow = 'none';
     if (lbl) lbl.textContent = 'Syncing...';
+  } else if (state === 'off') {
+    el.style.background = 'var(--text3)';
+    el.style.boxShadow = 'none';
+    if (lbl) lbl.textContent = 'Airtable (aus)';
   } else {
     el.style.background = 'var(--red)';
     el.style.boxShadow = 'none';
-    if (lbl) lbl.textContent = 'Sheets offline';
+    if (lbl) lbl.textContent = 'Airtable Fehler';
   }
 }
+
+
 
 // ── STATE ─────────────────────────────────────────────────────────────────
 let projects = [];
@@ -1050,8 +1042,8 @@ function init() {
   const cfg = getConfig();
   if (cfg.token) document.getElementById('tokenInput').value = cfg.token;
   if (cfg.username) document.getElementById('usernameInput').value = cfg.username;
-  // Load from Google Sheets
-  loadFromSheets().then(() => {
+  // Load from Airtable
+  loadFromAirtable().then(() => {
     renderProjectList();
     if (currentProjectId) renderMain();
   });
@@ -1108,10 +1100,8 @@ function openTokenModal() {
   const cfg = getConfig();
   document.getElementById('tokenInput').value = cfg.token || '';
   document.getElementById('usernameInput').value = cfg.username || '';
-  document.getElementById('gSheetsKeyInput').value = cfg.gSheetsKey || '';
-  document.getElementById('gSheetsIdInput').value = cfg.gSheetsId || '';
-  document.getElementById('gDriveIdInput').value = cfg.gDriveId || '';
-  document.getElementById('appsScriptInput').value = cfg.appsScriptUrl || '';
+  document.getElementById('airtableKeyInput').value = cfg.airtableKey || '';
+  document.getElementById('airtableBaseInput').value = cfg.airtableBase || '';
   document.getElementById('tokenOverlay').classList.add('open');
 }
 
@@ -1123,15 +1113,13 @@ function saveToken() {
   const cfg = getConfig();
   cfg.token = document.getElementById('tokenInput').value.trim();
   cfg.username = document.getElementById('usernameInput').value.trim();
-  cfg.gSheetsKey = document.getElementById('gSheetsKeyInput').value.trim();
-  cfg.gSheetsId = document.getElementById('gSheetsIdInput').value.trim();
-  cfg.gDriveId = document.getElementById('gDriveIdInput').value.trim();
-  cfg.appsScriptUrl = document.getElementById('appsScriptInput').value.trim();
+  cfg.airtableKey = document.getElementById('airtableKeyInput').value.trim();
+  cfg.airtableBase = document.getElementById('airtableBaseInput').value.trim();
   saveConfig(cfg);
   updateTokenStatus();
   closeTokenModal();
   // Reload from sheets if configured
-  if (cfg.gSheetsKey && cfg.gSheetsId) loadFromSheets();
+  if (cfg.airtableKey && cfg.airtableBase) loadFromAirtable();
   showToast('✅ Einstellungen gespeichert');
 }
 
@@ -1263,9 +1251,7 @@ function renderMain() {
             <div style="font-size:9px;font-family:var(--mono);color:var(--text3);text-transform:uppercase;letter-spacing:1px;margin:14px 0 10px;padding-bottom:6px;border-bottom:1px solid var(--border);">🔑 API Keys</div>
             ${[
               {id:'anthropicKey', label:'Anthropic API Key', ph:'sk-ant-...', pw:true},
-              {id:'gSheetsKey', label:'Google Sheets API Key', ph:'AIza...', pw:true},
-              {id:'gSheetsId', label:'Google Sheets ID', ph:'1BxiMVs...', pw:false},
-              {id:'gDriveId', label:'Google Drive Ordner ID', ph:'1A2B3C...', pw:false},
+              {id:'airtableTable', label:'Airtable Tabelle (für diese App)', ph:'z.B. Notizen', pw:false},
             ].map(k => `
               <div class="field">
                 <label class="field-label">${k.label}</label>
@@ -1568,13 +1554,13 @@ function saveProjectSettings() {
   project.repo = document.getElementById('editRepo')?.value?.trim() || project.repo;
   project.desc = document.getElementById('editDesc')?.value?.trim() || '';
   if (!project.keys) project.keys = {};
-  ['anthropicKey','gSheetsKey','gSheetsId','gDriveId'].forEach(k => {
+  ['anthropicKey','airtableTable'].forEach(k => {
     const val = document.getElementById('key_' + k)?.value?.trim();
     if (val) project.keys[k] = val;
     else delete project.keys[k];
   });
   saveProjects();
-  saveToSheets(project);
+  saveProjectToAirtable(project);
   renderProjectList();
   renderMain();
   showToast('✅ Gespeichert & in Sheets synchronisiert');
@@ -1582,6 +1568,8 @@ function saveProjectSettings() {
 
 function deleteProject(id) {
   if (!confirm('Projekt wirklich löschen?')) return;
+  const project = projects.find(p => p.id === id);
+  if (project) deleteProjectFromAirtable(project);
   projects = projects.filter(p => p.id !== id);
   saveProjects();
   currentProjectId = null;
@@ -1608,13 +1596,9 @@ function createProject() {
   if (!name || !repo) { showToast('⚠ Name & Repo Pflichtfelder'); return; }
   const keys = {};
   const anthropicKey = document.getElementById('newAnthropicKey')?.value?.trim();
-  const gSheetsKey = document.getElementById('newGSheetsKey')?.value?.trim();
-  const gSheetsId = document.getElementById('newGSheetsId')?.value?.trim();
-  const gDriveId = document.getElementById('newGDriveId')?.value?.trim();
+  const airtableTable = document.getElementById('newAirtableTable')?.value?.trim();
   if (anthropicKey) keys.anthropicKey = anthropicKey;
-  if (gSheetsKey) keys.gSheetsKey = gSheetsKey;
-  if (gSheetsId) keys.gSheetsId = gSheetsId;
-  if (gDriveId) keys.gDriveId = gDriveId;
+  if (airtableTable) keys.airtableTable = airtableTable;
 
   const project = {
     id: 'p_' + Date.now(),
@@ -1627,7 +1611,7 @@ function createProject() {
   };
   projects.unshift(project);
   saveProjects();
-  saveToSheets(project);
+  saveProjectToAirtable(project);
   closeAddProject();
   renderProjectList();
   selectProject(project.id);
@@ -1707,7 +1691,7 @@ async function addUser(projectId) {
   saveProjects();
 
   // Save to Sheets
-  await syncUsersToSheets(project);
+  await syncUsersToAirtable(project);
 
   document.getElementById('newUserName').value = '';
   document.getElementById('newUserKey').value = '';
@@ -1731,7 +1715,7 @@ function toggleUserStatus(projectId, key) {
   if (!user) return;
   user.status = user.status === 'inaktiv' ? 'aktiv' : 'inaktiv';
   saveProjects();
-  syncUsersToSheets(project);
+  syncUsersToAirtable(project);
   renderMain();
   showToast(user.status === 'aktiv' ? '✅ Aktiviert' : '⏸ Deaktiviert');
 }
@@ -1740,33 +1724,65 @@ function removeUser(projectId, key) {
   if (!confirm('Benutzer wirklich löschen?')) return;
   const project = projects.find(p => p.id === projectId);
   if (!project) return;
+  const user = project.users?.find(u => u.key === key);
+  if (user) deleteUserFromAirtable(user);
   project.users = (project.users || []).filter(u => u.key !== key);
   saveProjects();
-  syncUsersToSheets(project);
   renderMain();
   showToast('🗑 Benutzer gelöscht');
 }
 
-async function syncUsersToSheets(project) {
-  const cfg = getConfig();
-  if (!cfg.appsScriptUrl || !cfg.gSheetsId) return;
+async function syncUsersToAirtable(project) {
+  const ac = getAirtableConfig();
+  if (!ac.apiKey || !ac.baseId) return;
 
-  const tabName = project.repo.replace(/[^a-zA-Z0-9]/g,'_') + '_User';
   const users = project.users || [];
-  const headers = ['api_key','name','role','status','created'];
-
+  setAirtableStatus('loading');
   try {
-    // Clear and rewrite all users
     for (const u of users) {
-      const row = [u.key, u.name, u.role||'user', u.status||'aktiv', u.created||''];
-      const url = `${cfg.appsScriptUrl}?action=saveRow&sheetId=${cfg.gSheetsId}&tab=${encodeURIComponent(tabName)}&headers=${encodeURIComponent(JSON.stringify(headers))}&row=${encodeURIComponent(JSON.stringify(row))}`;
-      await fetch(url);
+      const fields = {
+        project_id: project.id,
+        api_key: u.key,
+        name: u.name,
+        role: u.role || 'user',
+        status: u.status || 'aktiv',
+        created: u.created || '',
+      };
+      if (u.airtableRecordId) {
+        await airtableRequest(TABLE_USERS, {
+          method: 'PATCH',
+          path: '/' + u.airtableRecordId,
+          body: { fields }
+        }).catch(e => console.error('User update error:', e));
+      } else {
+        const res = await airtableRequest(TABLE_USERS, {
+          method: 'POST',
+          body: { fields }
+        }).catch(e => null);
+        if (res?.id) {
+          u.airtableRecordId = res.id;
+          saveProjects();
+        }
+      }
     }
-    setSheetsStatus('ok');
+    setAirtableStatus('ok');
   } catch(e) {
     console.error('User sync error:', e);
+    setAirtableStatus('error');
   }
 }
+
+async function deleteUserFromAirtable(user) {
+  if (!user?.airtableRecordId) return;
+  try {
+    await airtableRequest(TABLE_USERS, {
+      method: 'DELETE',
+      path: '/' + user.airtableRecordId,
+    });
+  } catch(e) { console.error('User delete error:', e); }
+}
+
+
 
 // ── TOAST ──────────────────────────────────────────────────────────────────
 function showToast(msg) {
