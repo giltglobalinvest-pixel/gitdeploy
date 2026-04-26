@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
-<title>GitDeploy v2.1 · Airtable</title>
+<title>GitDeploy v2.4 · Wizard</title>
 <link href="https://fonts.googleapis.com/css2?family=DM+Mono:wght@400;500&family=Bricolage+Grotesque:wght@400;600;700;800&display=swap" rel="stylesheet">
 <style>
 :root {
@@ -664,6 +664,72 @@ body::after {
   cursor:pointer;
 }
 
+
+/* ── CODE SNIPPET BOX ── */
+.snippet-box {
+  border:1px solid var(--border);
+  border-radius:16px;
+  overflow:hidden;
+  margin-top:16px;
+  background:var(--surface);
+}
+.snippet-header {
+  background:var(--surface);
+  padding:14px 18px;
+  border-bottom:1px solid var(--border);
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+}
+.snippet-title {
+  font-size:11px;
+  font-family:var(--mono);
+  color:var(--text2);
+  text-transform:uppercase;
+  letter-spacing:1px;
+}
+.snippet-info {
+  padding:12px 18px;
+  font-size:11px;
+  color:var(--text2);
+  font-family:var(--mono);
+  background:var(--surface2);
+  border-bottom:1px solid var(--border);
+  line-height:1.6;
+}
+.snippet-code {
+  background:#0d0d0d;
+  color:#a8e6a8;
+  padding:14px 18px;
+  font-family:var(--mono);
+  font-size:11px;
+  line-height:1.5;
+  overflow-x:auto;
+  white-space:pre;
+  max-height:300px;
+  overflow-y:auto;
+}
+.snippet-actions {
+  padding:10px 18px;
+  display:flex;
+  gap:8px;
+  border-top:1px solid var(--border);
+}
+.snippet-btn {
+  padding:8px 14px;
+  border-radius:8px;
+  border:1px solid var(--blue);
+  background:rgba(68,138,255,0.08);
+  color:var(--blue);
+  font-family:var(--mono);
+  font-size:11px;
+  cursor:pointer;
+  transition:all 0.15s;
+}
+.snippet-btn:hover { background:rgba(68,138,255,0.18); }
+.snippet-btn.green { border-color:var(--green); color:var(--green); background:rgba(0,230,118,0.08); }
+.snippet-btn.green:hover { background:rgba(0,230,118,0.18); }
+
 ::-webkit-scrollbar { width:4px; }
 ::-webkit-scrollbar-track { background:transparent; }
 ::-webkit-scrollbar-thumb { background:var(--border2); border-radius:2px; }
@@ -675,7 +741,7 @@ body::after {
   <div class="logo">
     <button onclick="toggleMobileSidebar()" class="mobile-menu-btn" style="display:none;background:var(--surface2);border:1px solid var(--border2);color:var(--text);border-radius:8px;padding:6px 10px;font-size:16px;cursor:pointer;margin-right:8px;">☰</button>
     <div class="logo-mark">🚀</div>
-    <div class="logo-name">Git<span>Deploy</span> <span style="font-size:9px;color:var(--text3);font-family:var(--mono);">v2.1</span></div>
+    <div class="logo-name">Git<span>Deploy</span> <span style="font-size:9px;color:var(--text3);font-family:var(--mono);">v2.4</span></div>
   </div>
   <div class="token-status">
     <div class="token-dot" id="airtableStatusDot" style="background:var(--text3);"></div>
@@ -695,7 +761,7 @@ body::after {
       <button id="filterArchive" onclick="setProjectFilter('archive')" style="flex:1;padding:5px;border-radius:7px;border:1px solid var(--border2);background:transparent;color:var(--text3);font-family:var(--mono);font-size:9px;cursor:pointer;font-weight:700;">ARCHIV</button>
     </div>
     <div id="projectList"></div>
-    <button class="add-project-btn" onclick="openAddProject()">＋ Neues Projekt</button>
+    <button class="add-project-btn" onclick="openAddProjectWithBases()">＋ Neues Projekt</button>
   </div>
 
   <!-- MAIN -->
@@ -742,9 +808,22 @@ body::after {
         <div style="font-size:9px;color:var(--text3);font-family:var(--mono);margin-top:4px;">airtable.com → Builder Hub → Persönliche Zugangstoken (mit schema.bases:write Scope!)</div>
       </div>
       <div class="field">
-        <label class="field-label">Airtable Base ID</label>
+        <label class="field-label">Airtable Base ID (Master-Base "Claude App Deployer")</label>
         <input class="field-input" type="text" id="airtableBaseInput" placeholder="appXXXXXXXXXXXXXX">
-        <div style="font-size:9px;color:var(--text3);font-family:var(--mono);margin-top:4px;">In Airtable: Help → API Documentation → Base-ID kopieren</div>
+        <div style="font-size:9px;color:var(--text3);font-family:var(--mono);margin-top:4px;">Wo Projekte/Keys/User gespeichert werden</div>
+      </div>
+      <div class="field">
+        <label class="field-label">Airtable Workspace ID (für Auto-Base-Erstellung)</label>
+        <input class="field-input" type="text" id="airtableWorkspaceInput" placeholder="wspXXXXXXXXXXXXXX">
+        <div style="font-size:9px;color:var(--text3);font-family:var(--mono);margin-top:4px;">URL der Workspace anschauen: airtable.com/workspaces/wspXXX</div>
+      </div>
+      <div class="field">
+        <label class="field-label">🔓 Airtable READ Token (für App-Integration)</label>
+        <div class="field-row">
+          <input class="field-input" type="password" id="airtableReadKeyInput" placeholder="pat... (read-only)">
+          <button onclick="toggleVis('airtableReadKeyInput')" style="padding:9px 12px;border-radius:8px;border:1px solid var(--border2);background:var(--surface2);color:var(--text2);cursor:pointer;font-size:13px;">👁</button>
+        </div>
+        <div style="font-size:9px;color:var(--text3);font-family:var(--mono);margin-top:4px;">Wird in jede App eingebaut. Nur Lesen, eingeschränkt. Kein Sicherheitsrisiko.</div>
       </div>
       <div id="airtableTestResult" style="display:none;margin-top:8px;font-size:11px;font-family:var(--mono);padding:8px;border-radius:8px;"></div>
       <button onclick="testAirtableConnection()" style="width:100%;margin-top:8px;padding:8px;border-radius:8px;border:1px solid var(--border2);background:var(--surface3);color:var(--text2);font-family:var(--mono);font-size:11px;cursor:pointer;">🔌 Verbindung testen</button>
@@ -790,9 +869,18 @@ body::after {
         <div style="font-size:9px;color:var(--text3);font-family:var(--mono);margin-top:4px;">Falls die App KI-Funktionen nutzt</div>
       </div>
       <div class="field">
-        <label class="field-label">Airtable Tabellen-Name (optional)</label>
-        <input class="field-input" type="text" id="newAirtableTable" placeholder="z.B. Notizen">
-        <div style="font-size:9px;color:var(--text3);font-family:var(--mono);margin-top:4px;">Falls die App eine eigene Tabelle in der Base hat</div>
+        <label class="field-label">📊 Airtable Base auswählen</label>
+        <div style="display:flex;gap:6px;">
+          <select class="field-input" id="newAirtableBase" style="flex:1;">
+            <option value="">– Base wird geladen... –</option>
+          </select>
+          <button onclick="loadAirtableBases()" type="button" style="padding:8px 12px;border-radius:8px;border:1px solid var(--border2);background:var(--surface3);color:var(--text2);cursor:pointer;font-family:var(--mono);font-size:11px;">🔄</button>
+        </div>
+        <div style="font-size:9px;color:var(--text3);font-family:var(--mono);margin-top:4px;">Lege die Base zuerst manuell in Airtable an, dann hier auswählen</div>
+      </div>
+      <div class="field" id="tableListField" style="display:none;">
+        <label class="field-label">📋 Verfügbare Tabellen in Base</label>
+        <div id="tableList" style="background:var(--surface3);border:1px solid var(--border);border-radius:8px;padding:10px;font-family:var(--mono);font-size:11px;color:var(--text2);min-height:36px;"></div>
       </div>
     </div>
 
@@ -929,6 +1017,33 @@ async function loadFromAirtable() {
   }
 }
 
+async function createBaseInAirtable(baseName, tables) {
+  // Creates a new base in the Airtable workspace
+  const ac = getAirtableConfig();
+  const cfg = getConfig();
+  if (!ac.apiKey) throw new Error('Airtable Key fehlt');
+  if (!cfg.airtableWorkspace) throw new Error('Workspace ID fehlt – bitte in Einstellungen eintragen');
+
+  const url = 'https://api.airtable.com/v0/meta/bases';
+  const res = await fetch(url, {
+    method: 'POST',
+    headers: {
+      'Authorization': 'Bearer ' + ac.apiKey,
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify({
+      name: baseName,
+      workspaceId: cfg.airtableWorkspace,
+      tables: tables,
+    }),
+  });
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({}));
+    throw new Error(err.error?.message || `Base konnte nicht erstellt werden (${res.status})`);
+  }
+  return await res.json();
+}
+
 async function createTableInAirtable(tableName, fields) {
   // Creates a new table in the configured Airtable base via Meta API
   const ac = getAirtableConfig();
@@ -1000,6 +1115,9 @@ async function saveProjectToAirtable(project) {
       archived: !!project.archived,
       created: project.created || '',
     };
+    if (project.airtableBaseId) {
+      fields.airtable_base_id = project.airtableBaseId;
+    }
 
     if (project.airtableRecordId) {
       // Update
@@ -1156,6 +1274,8 @@ function openTokenModal() {
   document.getElementById('usernameInput').value = cfg.username || '';
   document.getElementById('airtableKeyInput').value = cfg.airtableKey || '';
   document.getElementById('airtableBaseInput').value = cfg.airtableBase || '';
+  document.getElementById('airtableWorkspaceInput').value = cfg.airtableWorkspace || '';
+  document.getElementById('airtableReadKeyInput').value = cfg.airtableReadKey || '';
   document.getElementById('tokenOverlay').classList.add('open');
 }
 
@@ -1169,6 +1289,8 @@ function saveToken() {
   cfg.username = document.getElementById('usernameInput').value.trim();
   cfg.airtableKey = document.getElementById('airtableKeyInput').value.trim();
   cfg.airtableBase = document.getElementById('airtableBaseInput').value.trim();
+  cfg.airtableWorkspace = document.getElementById('airtableWorkspaceInput').value.trim();
+  cfg.airtableReadKey = document.getElementById('airtableReadKeyInput').value.trim();
   saveConfig(cfg);
   updateTokenStatus();
   closeTokenModal();
@@ -1402,7 +1524,27 @@ function renderMain() {
 
       <!-- User List -->
       ${renderUserList(project)}
+    </div>
+
+    <!-- Anleitung für Claude-Projekt -->
+    <div class="snippet-box">
+      <div class="snippet-header">
+        <div class="snippet-title">// Anleitung für Claude-Projekt</div>
+        <button class="snippet-btn green" onclick="copyInstructions('${project.id}')">📋 Kopieren</button>
+      </div>
+      <div class="snippet-info">
+        Diesen kompletten Text in dein Claude-Projekt einfügen. Claude weiß dann genau welche Base, welche Tabellen, welche Felder es gibt – und kann sofort eine funktionierende App bauen.
+      </div>
+      <div class="snippet-code" id="instructions-${project.id}">${escHtml(generateInstructionText(project))}</div>
+      <div class="snippet-actions">
+        <button class="snippet-btn" onclick="copyInstructions('${project.id}')">📋 In Zwischenablage kopieren</button>
+        <button class="snippet-btn" onclick="loadProjectTables(projects.find(p=>p.id==='${project.id}'))">🔄 Tabellen neu laden</button>
+      </div>
     </div>`;
+
+  // Auto-load tables for snippet
+  const proj = projects.find(p => p.id === project.id);
+  if (proj && !proj._tables) loadProjectTables(proj);
 }
 
 function renderVersionHistory(project) {
@@ -1648,14 +1790,13 @@ async function createProject() {
   const name = document.getElementById('newName')?.value?.trim();
   const repo = document.getElementById('newRepo')?.value?.trim();
   if (!name || !repo) { showToast('⚠ Name & Repo Pflichtfelder'); return; }
+
+  const selectedBase = document.getElementById('newAirtableBase')?.value?.trim();
+
   const keys = {};
   const anthropicKey = document.getElementById('newAnthropicKey')?.value?.trim();
-  const airtableTable = document.getElementById('newAirtableTable')?.value?.trim();
   if (anthropicKey) keys.anthropicKey = anthropicKey;
-
-  // Determine table name: custom or derived from project name
-  const tableName = airtableTable || name;
-  keys.airtableTable = tableName;
+  if (selectedBase) keys.airtableBaseId = selectedBase;
 
   const project = {
     id: 'p_' + Date.now(),
@@ -1665,6 +1806,8 @@ async function createProject() {
     versions: [],
     created: new Date().toLocaleDateString('de-DE'),
     keys,
+    airtableBaseId: selectedBase || null,
+    _tables: window._currentBaseTables || [],
   };
   projects.unshift(project);
   saveProjects();
@@ -1672,21 +1815,13 @@ async function createProject() {
   renderProjectList();
   selectProject(project.id);
 
-  // Save project metadata to Airtable
+  // Save project metadata to Master Base
   await saveProjectToAirtable(project);
 
-  // Auto-create app-specific table in Airtable
-  try {
-    showToast('🔄 Erstelle Tabelle "' + tableName + '" in Airtable...');
-    const result = await createTableInAirtable(tableName, getDefaultAppTableFields());
-    if (result.exists) {
-      showToast('✅ Projekt erstellt – Tabelle existiert bereits');
-    } else {
-      showToast('✅ Projekt erstellt – Tabelle "' + tableName + '" angelegt');
-    }
-  } catch(e) {
-    console.error('Table creation error:', e);
-    showToast('⚠ Projekt OK, aber Tabelle konnte nicht erstellt werden: ' + e.message);
+  if (selectedBase) {
+    showToast('✅ Projekt erstellt mit Base "' + selectedBase + '"');
+  } else {
+    showToast('✅ Projekt erstellt (ohne Base – später in Einstellungen verknüpfen)');
   }
 }
 
@@ -1855,6 +1990,409 @@ async function deleteUserFromAirtable(user) {
 }
 
 
+
+
+
+// ── AIRTABLE BASE WIZARD ───────────────────────────────────────────────────
+async function loadAirtableBases() {
+  const sel = document.getElementById('newAirtableBase');
+  if (!sel) return;
+  const ac = getAirtableConfig();
+  if (!ac.apiKey) {
+    sel.innerHTML = '<option value="">⚠ Airtable in Einstellungen konfigurieren</option>';
+    return;
+  }
+  sel.innerHTML = '<option value="">🔄 Lade Bases...</option>';
+  try {
+    const res = await fetch('https://api.airtable.com/v0/meta/bases', {
+      headers: { 'Authorization': 'Bearer ' + ac.apiKey }
+    });
+    if (!res.ok) {
+      sel.innerHTML = '<option value="">❌ Bases laden fehlgeschlagen</option>';
+      return;
+    }
+    const data = await res.json();
+    const bases = data.bases || [];
+    if (!bases.length) {
+      sel.innerHTML = '<option value="">⚠ Keine Bases gefunden</option>';
+      return;
+    }
+    sel.innerHTML = '<option value="">– Base auswählen –</option>' +
+      bases.map(b => `<option value="${b.id}" data-name="${b.name}">${b.name} (${b.id})</option>`).join('');
+    sel.onchange = onBaseSelected;
+  } catch(e) {
+    sel.innerHTML = '<option value="">❌ Fehler: ' + e.message + '</option>';
+  }
+}
+
+async function onBaseSelected() {
+  const sel = document.getElementById('newAirtableBase');
+  const baseId = sel.value;
+  const tableField = document.getElementById('tableListField');
+  const tableList = document.getElementById('tableList');
+  if (!baseId) {
+    tableField.style.display = 'none';
+    return;
+  }
+  tableField.style.display = 'block';
+  tableList.textContent = '🔄 Lade Tabellen...';
+  const ac = getAirtableConfig();
+  try {
+    const res = await fetch(`https://api.airtable.com/v0/meta/bases/${baseId}/tables`, {
+      headers: { 'Authorization': 'Bearer ' + ac.apiKey }
+    });
+    if (!res.ok) {
+      tableList.textContent = '❌ Tabellen laden fehlgeschlagen';
+      return;
+    }
+    const data = await res.json();
+    const tables = data.tables || [];
+    if (!tables.length) {
+      tableList.innerHTML = '<span style="color:var(--text3);">⚠ Keine Tabellen – bitte mindestens eine in Airtable anlegen</span>';
+      return;
+    }
+    // Store tables for later use
+    window._currentBaseTables = tables;
+    tableList.innerHTML = tables.map(t => {
+      const fields = (t.fields || []).map(f => f.name).join(', ');
+      return `<div style="margin-bottom:6px;">
+        <span style="color:var(--green);font-weight:700;">▸ ${t.name}</span>
+        <span style="color:var(--text3);font-size:10px;"> [${fields}]</span>
+      </div>`;
+    }).join('');
+  } catch(e) {
+    tableList.textContent = '❌ Fehler: ' + e.message;
+  }
+}
+
+// Auto-load bases when modal opens
+function openAddProjectWithBases() {
+  openAddProject();
+  setTimeout(() => loadAirtableBases(), 200);
+}
+
+// ── ANLEITUNGS-TEXT GENERATOR ─────────────────────────────────────────────
+function generateInstructionText(project) {
+  const cfg = getConfig();
+  const readKey = cfg.airtableReadKey || '⚠ READ-TOKEN_FEHLT';
+  const masterBase = cfg.airtableBase || '⚠ MASTER-BASE_FEHLT';
+  const appBase = project.airtableBaseId || project.keys?.airtableBaseId || '⚠ APP-BASE_FEHLT';
+  const tables = project._tables || [];
+
+  let tablesInfo = '';
+  if (tables.length) {
+    tablesInfo = '\n## Verfügbare Tabellen in der App-Base:\n';
+    tables.forEach(t => {
+      tablesInfo += `\n### Tabelle "${t.name}"\n`;
+      tablesInfo += 'Felder: ' + (t.fields || []).map(f => `\`${f.name}\` (${f.type})`).join(', ') + '\n';
+    });
+  }
+
+  return `# App: ${project.name}
+
+Hallo Claude! Bitte hilf mir diese App zu bauen. Hier sind alle wichtigen Informationen:
+
+## Projekt-Info
+- **Name:** ${project.name}
+- **Repository:** ${project.repo}
+- **Beschreibung:** ${project.desc || '(noch keine)'}
+- **Project-ID:** ${project.id}
+
+## Architektur
+Die App nutzt **Airtable** als Datenbank über die REST API. 
+- Die App läuft lokal oder auf GitHub Pages
+- User-Login per persönlichem Key (in Tabelle "User" der Master-Base)
+- Read-Token ist im Code eingebettet (eingeschränkt, sicher)
+- Write-Token + Anthropic Key werden nach User-Login geladen
+
+## Airtable-Konfiguration
+- **Master-Base ID:** \\`${masterBase}\\` (enthält Projekte/Keys/User)
+- **App-Base ID:** \\`${appBase}\\` (enthält die App-Daten)
+- **Read-Token:** \\`${readKey}\\` (im App-Code, nur lesen)
+${tablesInfo}
+
+## Funktions-Templates
+
+\\`\\`\\`javascript
+// CONFIG am Anfang der App
+const APP_CONFIG = {
+  AIRTABLE_READ_KEY: '${readKey}',
+  MASTER_BASE_ID: '${masterBase}',
+  APP_BASE_ID: '${appBase}',
+  PROJECT_ID: '${project.id}',
+  PROJECT_NAME: '${project.name}',
+};
+
+let APP_KEYS = { airtableWriteKey: null, anthropicKey: null, user: null };
+
+// LOGIN: User gibt persönlichen Key ein
+async function loginWithUserKey(userKey) {
+  const headers = { 'Authorization': 'Bearer ' + APP_CONFIG.AIRTABLE_READ_KEY };
+  const userRes = await fetch(
+    \\`https://api.airtable.com/v0/\\${APP_CONFIG.MASTER_BASE_ID}/User?filterByFormula=AND({api_key}='\\${userKey}',{project_id}='\\${APP_CONFIG.PROJECT_ID}',{status}='aktiv')\\`,
+    { headers }
+  );
+  const userData = await userRes.json();
+  if (!userData.records?.length) throw new Error('Ungültiger Key');
+  APP_KEYS.user = userData.records[0].fields;
+  
+  // Lade App-Keys
+  const keysRes = await fetch(
+    \\`https://api.airtable.com/v0/\\${APP_CONFIG.MASTER_BASE_ID}/Keys?filterByFormula={project_id}='\\${APP_CONFIG.PROJECT_ID}'\\`,
+    { headers }
+  );
+  const keysData = await keysRes.json();
+  (keysData.records || []).forEach(rec => {
+    if (rec.fields.key_name === 'anthropicKey') APP_KEYS.anthropicKey = rec.fields.key_value;
+    if (rec.fields.key_name === 'airtableWriteKey') APP_KEYS.airtableWriteKey = rec.fields.key_value;
+  });
+  return APP_KEYS.user;
+}
+
+// DATEN LESEN
+async function readData(table, filter = '') {
+  const url = \\`https://api.airtable.com/v0/\\${APP_CONFIG.APP_BASE_ID}/\\${encodeURIComponent(table)}\\${filter ? '?filterByFormula=' + encodeURIComponent(filter) : ''}\\`;
+  const res = await fetch(url, { headers: { 'Authorization': 'Bearer ' + APP_CONFIG.AIRTABLE_READ_KEY } });
+  return (await res.json()).records || [];
+}
+
+// DATEN SCHREIBEN
+async function writeData(table, fields) {
+  if (!APP_KEYS.airtableWriteKey) throw new Error('Bitte einloggen');
+  const res = await fetch(
+    \\`https://api.airtable.com/v0/\\${APP_CONFIG.APP_BASE_ID}/\\${encodeURIComponent(table)}\\`,
+    {
+      method: 'POST',
+      headers: { 'Authorization': 'Bearer ' + APP_KEYS.airtableWriteKey, 'Content-Type': 'application/json' },
+      body: JSON.stringify({ fields }),
+    }
+  );
+  return await res.json();
+}
+
+// KI ANFRAGEN
+async function askAI(prompt) {
+  if (!APP_KEYS.anthropicKey) throw new Error('Anthropic Key fehlt');
+  const res = await fetch('https://api.anthropic.com/v1/messages', {
+    method: 'POST',
+    headers: {
+      'x-api-key': APP_KEYS.anthropicKey,
+      'anthropic-version': '2023-06-01',
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify({
+      model: 'claude-sonnet-4-20250514',
+      max_tokens: 1024,
+      messages: [{ role: 'user', content: prompt }],
+    }),
+  });
+  return (await res.json()).content?.[0]?.text || '';
+}
+\\`\\`\\`
+
+## Design-Standards
+- Mobile-first, funktioniert auch am Desktop
+- Saubere moderne Optik
+- Login-Screen vor App-Start
+- Loading-States bei async-Aktionen
+- Toast-Nachrichten für Feedback
+
+## Update-Mechanismus (optional)
+Beim Start prüfen ob neue Version auf GitHub:
+\\`\\`\\`javascript
+const APP_VERSION = 'v1.0';
+const GITHUB_REPO = '${cfg.username || 'USERNAME'}/${project.repo}';
+fetch(\\`https://api.github.com/repos/\\${GITHUB_REPO}/releases/latest\\`)
+  .then(r => r.json())
+  .then(d => { if (d.tag_name && d.tag_name !== APP_VERSION) showUpdateBanner(d.tag_name); });
+\\`\\`\\`
+
+---
+**Bitte baue die App mit diesen Vorgaben. Was soll die App genau tun?**
+`;
+}
+
+function copyInstructions(projectId) {
+  const project = projects.find(p => p.id === projectId);
+  if (!project) return;
+  const text = generateInstructionText(project);
+  navigator.clipboard.writeText(text).then(() => {
+    showToast('📋 Anleitung kopiert! In Claude-Projekt einfügen');
+  }).catch(() => {
+    // Fallback: show in textarea
+    const ta = document.createElement('textarea');
+    ta.value = text;
+    document.body.appendChild(ta);
+    ta.select();
+    document.execCommand('copy');
+    document.body.removeChild(ta);
+    showToast('📋 Anleitung kopiert');
+  });
+}
+
+async function loadProjectTables(project) {
+  const baseId = project.airtableBaseId || project.keys?.airtableBaseId;
+  if (!baseId) return;
+  const ac = getAirtableConfig();
+  if (!ac.apiKey) return;
+  try {
+    const res = await fetch(`https://api.airtable.com/v0/meta/bases/${baseId}/tables`, {
+      headers: { 'Authorization': 'Bearer ' + ac.apiKey }
+    });
+    if (res.ok) {
+      const data = await res.json();
+      project._tables = data.tables || [];
+      renderMain();
+    }
+  } catch(e) { /* ignore */ }
+}
+
+// ── CODE SNIPPET GENERATOR ────────────────────────────────────────────────
+function escHtml(s) {
+  return (s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+}
+
+function generateAppSnippet(project) {
+  const cfg = getConfig();
+  const readKey = cfg.airtableReadKey || 'pat_READ_TOKEN_HIER';
+  const baseId = cfg.airtableBase || 'appXXXXXXXXXXXXXX';
+  const projectId = project.id;
+  const projectName = project.name;
+  const appBaseId = project.airtableBaseId || project.keys?.airtableBaseId || baseId;
+
+  return `// ════════════════════════════════════════════════════════
+// ${projectName} – Auto-generiert von GitDeploy
+// ════════════════════════════════════════════════════════
+
+const APP_CONFIG = {
+  // Read-Token (sicher im Code, nur lesen)
+  AIRTABLE_READ_KEY: '${readKey}',
+  MASTER_BASE_ID: '${baseId}',
+  PROJECT_ID: '${projectId}',
+  PROJECT_NAME: '${projectName}',
+  APP_BASE_ID: '${appBaseId}',
+};
+
+// State - wird nach Login gefüllt
+let APP_KEYS = {
+  airtableWriteKey: null,
+  anthropicKey: null,
+  appBaseId: APP_CONFIG.APP_BASE_ID,
+  user: null,
+};
+
+// ── LOGIN: User gibt persönlichen Key ein ─────────────────
+async function loginWithUserKey(userKey) {
+  const headers = { 'Authorization': 'Bearer ' + APP_CONFIG.AIRTABLE_READ_KEY };
+
+  // 1. User suchen
+  const userRes = await fetch(
+    \`https://api.airtable.com/v0/\${APP_CONFIG.MASTER_BASE_ID}/User?filterByFormula=AND({api_key}='\${userKey}',{project_id}='\${APP_CONFIG.PROJECT_ID}',{status}='aktiv')\`,
+    { headers }
+  );
+  const userData = await userRes.json();
+  if (!userData.records?.length) {
+    throw new Error('Ungültiger oder deaktivierter Key');
+  }
+  APP_KEYS.user = userData.records[0].fields;
+
+  // 2. Projekt-Keys laden (Anthropic, etc.)
+  const keysRes = await fetch(
+    \`https://api.airtable.com/v0/\${APP_CONFIG.MASTER_BASE_ID}/Keys?filterByFormula={project_id}='\${APP_CONFIG.PROJECT_ID}'\`,
+    { headers }
+  );
+  const keysData = await keysRes.json();
+  (keysData.records || []).forEach(rec => {
+    const f = rec.fields;
+    if (f.key_name === 'anthropicKey') APP_KEYS.anthropicKey = f.key_value;
+    if (f.key_name === 'airtableWriteKey') APP_KEYS.airtableWriteKey = f.key_value;
+    if (f.key_name === 'airtableBaseId') APP_KEYS.appBaseId = f.key_value;
+  });
+
+  return APP_KEYS.user;
+}
+
+// ── DATEN LESEN aus App-Base ──────────────────────────────
+async function readData(table, filter = '') {
+  const url = \`https://api.airtable.com/v0/\${APP_KEYS.appBaseId}/\${encodeURIComponent(table)}\${filter ? '?filterByFormula=' + encodeURIComponent(filter) : ''}\`;
+  const res = await fetch(url, {
+    headers: { 'Authorization': 'Bearer ' + APP_CONFIG.AIRTABLE_READ_KEY }
+  });
+  if (!res.ok) throw new Error('Read failed');
+  return (await res.json()).records || [];
+}
+
+// ── DATEN SCHREIBEN in App-Base ──────────────────────────
+async function writeData(table, fields) {
+  if (!APP_KEYS.airtableWriteKey) throw new Error('Bitte erst einloggen');
+  const res = await fetch(
+    \`https://api.airtable.com/v0/\${APP_KEYS.appBaseId}/\${encodeURIComponent(table)}\`,
+    {
+      method: 'POST',
+      headers: {
+        'Authorization': 'Bearer ' + APP_KEYS.airtableWriteKey,
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({ fields }),
+    }
+  );
+  if (!res.ok) throw new Error('Write failed');
+  return await res.json();
+}
+
+// ── ANTHROPIC AI AUFRUFEN ────────────────────────────────
+async function askAI(prompt) {
+  if (!APP_KEYS.anthropicKey) throw new Error('Anthropic Key fehlt');
+  const res = await fetch('https://api.anthropic.com/v1/messages', {
+    method: 'POST',
+    headers: {
+      'x-api-key': APP_KEYS.anthropicKey,
+      'anthropic-version': '2023-06-01',
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify({
+      model: 'claude-sonnet-4-20250514',
+      max_tokens: 1024,
+      messages: [{ role: 'user', content: prompt }],
+    }),
+  });
+  return (await res.json()).content?.[0]?.text || '';
+}
+
+// ════════════════════════════════════════════════════════
+// VERWENDUNG IN DER APP:
+//
+// 1. User gibt persönlichen Key ein → loginWithUserKey(key)
+// 2. Daten lesen → readData('TabellenName')
+// 3. Daten schreiben → writeData('TabellenName', { ... })
+// 4. KI fragen → askAI('Was ist 1+1?')
+// ════════════════════════════════════════════════════════`;
+}
+
+function copySnippet(projectId) {
+  const project = projects.find(p => p.id === projectId);
+  if (!project) return;
+  const code = generateAppSnippet(project);
+  navigator.clipboard.writeText(code).then(() => {
+    showToast('📋 Snippet kopiert! Jetzt in Claude-Projekt einfügen');
+  }).catch(() => {
+    showToast('⚠ Kopieren fehlgeschlagen');
+  });
+}
+
+function downloadSnippet(projectId) {
+  const project = projects.find(p => p.id === projectId);
+  if (!project) return;
+  const code = generateAppSnippet(project);
+  const blob = new Blob([code], { type: 'text/javascript' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = project.repo + '-snippet.js';
+  a.click();
+  URL.revokeObjectURL(url);
+  showToast('💾 Snippet heruntergeladen');
+}
 
 // ── TOAST ──────────────────────────────────────────────────────────────────
 function showToast(msg) {
