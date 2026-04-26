@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
-<title>GitDeploy v2.0 · Airtable</title>
+<title>GitDeploy v2.1 · Airtable</title>
 <link href="https://fonts.googleapis.com/css2?family=DM+Mono:wght@400;500&family=Bricolage+Grotesque:wght@400;600;700;800&display=swap" rel="stylesheet">
 <style>
 :root {
@@ -675,7 +675,7 @@ body::after {
   <div class="logo">
     <button onclick="toggleMobileSidebar()" class="mobile-menu-btn" style="display:none;background:var(--surface2);border:1px solid var(--border2);color:var(--text);border-radius:8px;padding:6px 10px;font-size:16px;cursor:pointer;margin-right:8px;">☰</button>
     <div class="logo-mark">🚀</div>
-    <div class="logo-name">Git<span>Deploy</span> <span style="font-size:9px;color:var(--text3);font-family:var(--mono);">v2.0</span></div>
+    <div class="logo-name">Git<span>Deploy</span> <span style="font-size:9px;color:var(--text3);font-family:var(--mono);">v2.1</span></div>
   </div>
   <div class="token-status">
     <div class="token-dot" id="airtableStatusDot" style="background:var(--text3);"></div>
@@ -739,7 +739,7 @@ body::after {
           <input class="field-input" type="password" id="airtableKeyInput" placeholder="pat...">
           <button onclick="toggleVis('airtableKeyInput')" style="padding:9px 12px;border-radius:8px;border:1px solid var(--border2);background:var(--surface2);color:var(--text2);cursor:pointer;font-size:13px;">👁</button>
         </div>
-        <div style="font-size:9px;color:var(--text3);font-family:var(--mono);margin-top:4px;">airtable.com → Account → Developer hub → Personal access tokens</div>
+        <div style="font-size:9px;color:var(--text3);font-family:var(--mono);margin-top:4px;">airtable.com → Builder Hub → Persönliche Zugangstoken (mit schema.bases:write Scope!)</div>
       </div>
       <div class="field">
         <label class="field-label">Airtable Base ID</label>
@@ -927,6 +927,60 @@ async function loadFromAirtable() {
     showToast('⚠ Airtable: ' + e.message);
     return false;
   }
+}
+
+async function createTableInAirtable(tableName, fields) {
+  // Creates a new table in the configured Airtable base via Meta API
+  const ac = getAirtableConfig();
+  if (!ac.apiKey || !ac.baseId) throw new Error('Airtable nicht konfiguriert');
+
+  // Sanitize table name (no special chars)
+  const cleanName = tableName.replace(/[^a-zA-Z0-9_äöüÄÖÜß ]/g, '').trim();
+  if (!cleanName) throw new Error('Ungültiger Tabellenname');
+
+  // Check if table already exists
+  try {
+    const meta = await fetch(`https://api.airtable.com/v0/meta/bases/${ac.baseId}/tables`, {
+      headers: { 'Authorization': 'Bearer ' + ac.apiKey }
+    });
+    if (meta.ok) {
+      const data = await meta.json();
+      const exists = (data.tables || []).find(t => t.name === cleanName);
+      if (exists) return { ok: true, exists: true, id: exists.id };
+    }
+  } catch(e) { /* ignore */ }
+
+  // Create new table
+  const url = `https://api.airtable.com/v0/meta/bases/${ac.baseId}/tables`;
+  const res = await fetch(url, {
+    method: 'POST',
+    headers: {
+      'Authorization': 'Bearer ' + ac.apiKey,
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify({
+      name: cleanName,
+      fields: fields,
+    }),
+  });
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({}));
+    throw new Error(err.error?.message || `Tabelle konnte nicht erstellt werden (${res.status})`);
+  }
+  return await res.json();
+}
+
+// Default fields for a new app table - minimal, customizable later
+function getDefaultAppTableFields() {
+  return [
+    { name: 'id', type: 'singleLineText' },
+    { name: 'title', type: 'singleLineText' },
+    { name: 'content', type: 'multilineText' },
+    { name: 'tag', type: 'singleLineText' },
+    { name: 'date', type: 'singleLineText' },
+    { name: 'author', type: 'singleLineText' },
+    { name: 'api_key', type: 'singleLineText' },
+  ];
 }
 
 async function saveProjectToAirtable(project) {
@@ -1590,7 +1644,7 @@ function closeAddProject() {
   });
 }
 
-function createProject() {
+async function createProject() {
   const name = document.getElementById('newName')?.value?.trim();
   const repo = document.getElementById('newRepo')?.value?.trim();
   if (!name || !repo) { showToast('⚠ Name & Repo Pflichtfelder'); return; }
@@ -1598,7 +1652,10 @@ function createProject() {
   const anthropicKey = document.getElementById('newAnthropicKey')?.value?.trim();
   const airtableTable = document.getElementById('newAirtableTable')?.value?.trim();
   if (anthropicKey) keys.anthropicKey = anthropicKey;
-  if (airtableTable) keys.airtableTable = airtableTable;
+
+  // Determine table name: custom or derived from project name
+  const tableName = airtableTable || name;
+  keys.airtableTable = tableName;
 
   const project = {
     id: 'p_' + Date.now(),
@@ -1611,11 +1668,26 @@ function createProject() {
   };
   projects.unshift(project);
   saveProjects();
-  saveProjectToAirtable(project);
   closeAddProject();
   renderProjectList();
   selectProject(project.id);
-  showToast('✅ Projekt erstellt & in Sheets gespeichert');
+
+  // Save project metadata to Airtable
+  await saveProjectToAirtable(project);
+
+  // Auto-create app-specific table in Airtable
+  try {
+    showToast('🔄 Erstelle Tabelle "' + tableName + '" in Airtable...');
+    const result = await createTableInAirtable(tableName, getDefaultAppTableFields());
+    if (result.exists) {
+      showToast('✅ Projekt erstellt – Tabelle existiert bereits');
+    } else {
+      showToast('✅ Projekt erstellt – Tabelle "' + tableName + '" angelegt');
+    }
+  } catch(e) {
+    console.error('Table creation error:', e);
+    showToast('⚠ Projekt OK, aber Tabelle konnte nicht erstellt werden: ' + e.message);
+  }
 }
 
 // ── EMOJI ──────────────────────────────────────────────────────────────────
