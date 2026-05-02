@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
-<title>GitDeploy v3.0.1 · Wizard</title>
+<title>GitDeploy v3.0.2 · Wizard</title>
 <link href="https://fonts.googleapis.com/css2?family=DM+Mono:wght@400;500&family=Bricolage+Grotesque:wght@400;600;700;800&display=swap" rel="stylesheet">
 <style>
 :root {
@@ -741,7 +741,7 @@ body::after {
   <div class="logo">
     <button onclick="toggleMobileSidebar()" class="mobile-menu-btn" style="display:none;background:var(--surface2);border:1px solid var(--border2);color:var(--text);border-radius:8px;padding:6px 10px;font-size:16px;cursor:pointer;margin-right:8px;">☰</button>
     <div class="logo-mark">🚀</div>
-    <div class="logo-name">Git<span>Deploy</span> <span style="font-size:9px;color:var(--text3);font-family:var(--mono);">v3.0.1</span></div>
+    <div class="logo-name">Git<span>Deploy</span> <span style="font-size:9px;color:var(--text3);font-family:var(--mono);">v3.0.2</span></div>
   </div>
   <div class="token-status">
     <div class="token-dot" id="airtableStatusDot" style="background:var(--text3);" title="Airtable Verbindung"></div>
@@ -1169,6 +1169,22 @@ async function loadFromAirtable() {
     }
 
     saveProjects();
+
+    // Orphan-Push: Projekte die nur lokal existieren (keine airtableRecordId) → nach Airtable pushen
+    // So bleibt Airtable Source of Truth und nichts geht verloren beim Origin-Wechsel
+    const orphans = projects.filter(p => !p.airtableRecordId);
+    if (orphans.length > 0) {
+      console.log('[loadFromAirtable] ' + orphans.length + ' Orphan-Projekte gefunden, pushe nach Airtable:', orphans.map(p => p.name));
+      for (const p of orphans) {
+        try {
+          await saveProjectToAirtable(p);
+        } catch(e) {
+          console.error('Orphan push error für', p.name, e);
+        }
+      }
+      showToast('🔄 ' + orphans.length + ' lokale Projekte zu Airtable synchronisiert');
+    }
+
     setAirtableStatus('ok');
     return true;
   } catch(e) {
@@ -1996,7 +2012,7 @@ function downloadDocsPdf() {
   <p style="color:#666;font-size:13px;margin-bottom:30px;">Vollständige Anleitung zur Nutzung des GitDeploy-Tools<br>
   <span style="font-size:11px;color:#888;">Erstellt am: ${new Date().toLocaleDateString('de-DE')}</span></p>
   ${docsHtml}
-  <div class="footer">GitDeploy v3.0.1 – Aufzugshandwerk GmbH</div>
+  <div class="footer">GitDeploy v3.0.2 – Aufzugshandwerk GmbH</div>
   <script>setTimeout(() => window.print(), 500);<\/script>
 </body>
 </html>`);
@@ -2096,6 +2112,8 @@ function archiveProject(id) {
   const isArchived = project.archived;
   project.archived = !isArchived;
   saveProjects();
+  // Sync zu Airtable damit Status erhalten bleibt
+  saveProjectToAirtable(project).catch(e => console.error('Archive sync error:', e));
   currentProjectId = null;
   renderProjectList();
   document.getElementById('mainContent').innerHTML = `<div class="empty-main">
