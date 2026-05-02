@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
-<title>GitDeploy v2.4.33 · Wizard</title>
+<title>GitDeploy v3.0 · Wizard</title>
 <link href="https://fonts.googleapis.com/css2?family=DM+Mono:wght@400;500&family=Bricolage+Grotesque:wght@400;600;700;800&display=swap" rel="stylesheet">
 <style>
 :root {
@@ -741,7 +741,7 @@ body::after {
   <div class="logo">
     <button onclick="toggleMobileSidebar()" class="mobile-menu-btn" style="display:none;background:var(--surface2);border:1px solid var(--border2);color:var(--text);border-radius:8px;padding:6px 10px;font-size:16px;cursor:pointer;margin-right:8px;">☰</button>
     <div class="logo-mark">🚀</div>
-    <div class="logo-name">Git<span>Deploy</span> <span style="font-size:9px;color:var(--text3);font-family:var(--mono);">v2.4.33</span></div>
+    <div class="logo-name">Git<span>Deploy</span> <span style="font-size:9px;color:var(--text3);font-family:var(--mono);">v3.0</span></div>
   </div>
   <div class="token-status">
     <div class="token-dot" id="airtableStatusDot" style="background:var(--text3);" title="Airtable Verbindung"></div>
@@ -1711,6 +1711,45 @@ function init() {
 }
 
 // Testet stillschweigend die Anthropic-Verbindung und aktualisiert den Status-Dot
+async function testAirtableConnection() {
+  const apiKey = document.getElementById('airtableKeyInput')?.value?.trim();
+  const baseId = document.getElementById('airtableBaseInput')?.value?.trim();
+  const resultEl = document.getElementById('airtableTestResult');
+  function show(msg, ok) {
+    if (!resultEl) return;
+    resultEl.style.display = 'block';
+    resultEl.style.background = ok ? 'rgba(0,230,118,0.1)' : 'rgba(255,82,82,0.1)';
+    resultEl.style.color = ok ? 'var(--green)' : 'var(--red)';
+    resultEl.style.border = '1px solid ' + (ok ? 'var(--green)' : 'var(--red)');
+    resultEl.innerHTML = msg;
+  }
+  if (!apiKey) { show('⚠ API Key fehlt', false); return; }
+  if (!baseId) { show('⚠ Base ID fehlt', false); return; }
+  show('🔄 Teste Verbindung...', true);
+  try {
+    // Meta-API testet beides (Key + Base) in einem Call
+    const res = await fetch(`https://api.airtable.com/v0/meta/bases/${baseId}/tables`, {
+      headers: { 'Authorization': 'Bearer ' + apiKey }
+    });
+    if (res.ok) {
+      const data = await res.json();
+      const tableCount = (data.tables || []).length;
+      const tableNames = (data.tables || []).map(t => t.name).join(', ');
+      show(`✅ Verbindung OK · ${tableCount} Tabellen gefunden<br><span style="opacity:0.7;font-size:10px;">${tableNames}</span>`, true);
+    } else {
+      const err = await res.json().catch(() => ({}));
+      const msg = err.error?.message || err.error?.type || `HTTP ${res.status}`;
+      let hint = '';
+      if (res.status === 401) hint = '<br><span style="opacity:0.7;font-size:10px;">→ API Key falsch oder Token abgelaufen</span>';
+      else if (res.status === 403) hint = '<br><span style="opacity:0.7;font-size:10px;">→ Token hat keinen Zugriff auf diese Base. Token-Scopes prüfen: schema.bases:read</span>';
+      else if (res.status === 404) hint = '<br><span style="opacity:0.7;font-size:10px;">→ Base ID nicht gefunden – tippfehler?</span>';
+      show(`❌ ${msg}${hint}`, false);
+    }
+  } catch(e) {
+    show(`❌ Netzwerk-Fehler: ${e.message}`, false);
+  }
+}
+
 async function testAnthropicConnection() {
   const cfg = getConfig();
   if (!cfg.anthropicGlobalKey) {
@@ -1957,7 +1996,7 @@ function downloadDocsPdf() {
   <p style="color:#666;font-size:13px;margin-bottom:30px;">Vollständige Anleitung zur Nutzung des GitDeploy-Tools<br>
   <span style="font-size:11px;color:#888;">Erstellt am: ${new Date().toLocaleDateString('de-DE')}</span></p>
   ${docsHtml}
-  <div class="footer">GitDeploy v2.4.33 – Aufzugshandwerk GmbH</div>
+  <div class="footer">GitDeploy v3.0 – Aufzugshandwerk GmbH</div>
   <script>setTimeout(() => window.print(), 500);<\/script>
 </body>
 </html>`);
