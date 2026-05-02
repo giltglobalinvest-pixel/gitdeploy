@@ -8,7 +8,7 @@
 <meta name="apple-mobile-web-app-title" content="GitDeploy">
 <meta name="theme-color" content="#0d0d0d">
 <meta name="format-detection" content="telephone=no">
-<title>GitDeploy v3.1.2 · Wizard</title>
+<title>GitDeploy v3.1.3 · Wizard</title>
 <link href="https://fonts.googleapis.com/css2?family=DM+Mono:wght@400;500&family=Bricolage+Grotesque:wght@400;600;700;800&display=swap" rel="stylesheet">
 <style>
 :root {
@@ -52,36 +52,43 @@ body::after {
 /* Header */
 .header {
   border-bottom:1px solid var(--border);
-  padding:16px 20px;
+  padding:14px 20px;
   display:flex;
   align-items:center;
   justify-content:space-between;
-  position:sticky;
+  position:fixed;
   top:0;
-  background:rgba(13,13,13,0.95);
-  backdrop-filter:blur(10px);
-  z-index:10;
+  left:0;
+  right:0;
+  background:rgba(13,13,13,0.96);
+  backdrop-filter:blur(14px);
+  -webkit-backdrop-filter:blur(14px);
+  z-index:100;
 }
+
+/* Layout muss um die fixed-Header-Höhe nach unten geschoben werden */
+.layout { padding-top:62px; }
 
 .logo {
   display:flex;
   align-items:center;
-  gap:10px;
+  gap:12px;
 }
 
 .logo-mark {
-  width:30px;
-  height:30px;
+  width:36px;
+  height:36px;
   background:var(--green);
-  border-radius:6px;
+  border-radius:8px;
   display:flex;
   align-items:center;
   justify-content:center;
-  font-size:16px;
+  font-size:20px;
+  flex-shrink:0;
 }
 
 .logo-name {
-  font-size:16px;
+  font-size:17px;
   font-weight:800;
   letter-spacing:-0.5px;
 }
@@ -519,7 +526,7 @@ body::after {
     display:none;
     position:fixed;
     inset:0;
-    top:64px;
+    top:66px;
     z-index:50;
     background:var(--bg);
     padding:16px;
@@ -532,34 +539,36 @@ body::after {
 
   /* Header: aufgeräumter Mobile-Look */
   .header {
-    padding:12px 14px !important;
-    gap:8px;
+    padding:10px 14px !important;
+    gap:10px;
   }
-  .logo { gap:8px; flex:1; min-width:0; }
-  .logo-mark { width:36px; height:36px; flex-shrink:0; }
-  .logo-name { font-size:15px; }
+  .layout { padding-top:64px; }
+  .logo { gap:10px; flex:1; min-width:0; }
+  .logo-mark { width:42px !important; height:42px !important; font-size:22px !important; flex-shrink:0; }
+  .logo-name { font-size:17px; }
   .logo-name span[style*="font-size:9px"] { display:none; } /* Versions-Label weg */
 
   /* Status-Bar: Labels weg, nur die farbigen Dots */
-  .token-status { gap:6px; flex-shrink:0; align-items:center; }
+  .token-status { gap:8px; flex-shrink:0; align-items:center; }
   #airtableStatusLabel, #tokenLabel, #anthropicStatusLabel { display:none !important; }
   .token-status > span { margin:0 !important; }
-  .token-dot { width:10px; height:10px; }
+  .token-dot { width:11px; height:11px; }
 
   /* Test/Hilfe Buttons im Header verstecken (sind im Settings erreichbar) */
   .topbar-test-btn, .topbar-help-btn { display:none !important; }
 
   /* Settings-Button (⚙) GROSS und sichtbar */
   .topbar-settings-btn {
-    min-width:44px !important;
-    min-height:44px !important;
+    min-width:46px !important;
+    min-height:46px !important;
     padding:0 !important;
-    margin-left:6px !important;
-    font-size:20px !important;
+    margin-left:8px !important;
+    font-size:24px !important;
+    line-height:1 !important;
     background:var(--green) !important;
     color:#0d0d0d !important;
     border:none !important;
-    border-radius:10px !important;
+    border-radius:12px !important;
     display:flex;
     align-items:center;
     justify-content:center;
@@ -567,10 +576,12 @@ body::after {
 
   /* Hamburger-Button GROSS */
   .mobile-menu-btn {
-    min-width:44px !important;
-    min-height:44px !important;
-    font-size:20px !important;
+    min-width:46px !important;
+    min-height:46px !important;
+    font-size:24px !important;
+    line-height:1 !important;
     padding:0 !important;
+    border-radius:12px !important;
   }
 
   /* iOS Safari: verhindert Auto-Zoom beim Tap auf Inputs (font-size MUSS >= 16px sein) */
@@ -650,10 +661,13 @@ body::after {
     padding-left:calc(14px + env(safe-area-inset-left)) !important;
     padding-right:calc(14px + env(safe-area-inset-right)) !important;
   }
-  /* Sidebar-Top dynamisch: muss unter Header + Notch starten */
+  /* Sidebar-Top + Layout-Padding dynamisch: müssen unter Header + Notch starten */
   @media(max-width:768px) {
     .sidebar {
-      top:calc(64px + env(safe-area-inset-top)) !important;
+      top:calc(66px + env(safe-area-inset-top)) !important;
+    }
+    .layout {
+      padding-top:calc(66px + env(safe-area-inset-top)) !important;
     }
   }
 }
@@ -870,7 +884,7 @@ body::after {
   <div class="logo">
     <button onclick="toggleMobileSidebar()" class="mobile-menu-btn" style="display:none;background:var(--surface2);border:1px solid var(--border2);color:var(--text);border-radius:8px;padding:6px 10px;font-size:16px;cursor:pointer;margin-right:8px;">☰</button>
     <div class="logo-mark">🚀</div>
-    <div class="logo-name">Git<span>Deploy</span> <span style="font-size:9px;color:var(--text3);font-family:var(--mono);">v3.1.2</span></div>
+    <div class="logo-name">Git<span>Deploy</span> <span style="font-size:9px;color:var(--text3);font-family:var(--mono);">v3.1.3</span></div>
   </div>
   <div class="token-status">
     <div class="token-dot" id="airtableStatusDot" style="background:var(--text3);" title="Airtable Verbindung"></div>
@@ -2179,7 +2193,7 @@ function downloadDocsPdf() {
   <p style="color:#666;font-size:13px;margin-bottom:30px;">Vollständige Anleitung zur Nutzung des GitDeploy-Tools<br>
   <span style="font-size:11px;color:#888;">Erstellt am: ${new Date().toLocaleDateString('de-DE')}</span></p>
   ${docsHtml}
-  <div class="footer">GitDeploy v3.1.2 – Aufzugshandwerk GmbH</div>
+  <div class="footer">GitDeploy v3.1.3 – Aufzugshandwerk GmbH</div>
   <script>setTimeout(() => window.print(), 500);<\/script>
 </body>
 </html>`);
