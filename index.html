@@ -8,7 +8,7 @@
 <meta name="apple-mobile-web-app-title" content="GitDeploy">
 <meta name="theme-color" content="#0d0d0d">
 <meta name="format-detection" content="telephone=no">
-<title>GitDeploy v3.2.0 · Wizard</title>
+<title>GitDeploy v3.2.1 · Wizard</title>
 <link href="https://fonts.googleapis.com/css2?family=DM+Mono:wght@400;500&family=Bricolage+Grotesque:wght@400;600;700;800&display=swap" rel="stylesheet">
 <style>
 :root {
@@ -884,7 +884,7 @@ body::after {
   <div class="logo">
     <button onclick="toggleMobileSidebar()" class="mobile-menu-btn" style="display:none;background:var(--surface2);border:1px solid var(--border2);color:var(--text);border-radius:8px;padding:6px 10px;font-size:16px;cursor:pointer;margin-right:8px;">☰</button>
     <div class="logo-mark">🚀</div>
-    <div class="logo-name">Git<span>Deploy</span> <span style="font-size:9px;color:var(--text3);font-family:var(--mono);">v3.2.0</span></div>
+    <div class="logo-name">Git<span>Deploy</span> <span style="font-size:9px;color:var(--text3);font-family:var(--mono);">v3.2.1</span></div>
   </div>
   <div class="token-status">
     <div class="token-dot" id="airtableStatusDot" style="background:var(--text3);" title="Airtable Verbindung"></div>
@@ -1318,7 +1318,7 @@ async function loadFromAirtable() {
         });
       });
       // Sortiere Versionen pro Projekt semver-aware (älteste zuerst, neueste am Ende)
-      // Robust gegen Mischformate wie "v3.2.0", "3.1.1", "v10.0", "V3.0", "v.3.03"
+      // Robust gegen Mischformate wie "v3.2.1", "3.1.1", "v10.0", "V3.0", "v.3.03"
       const parseSemver = (s) => {
         if (!s) return [0, 0, 0];
         const cleaned = String(s).toLowerCase().replace(/^v\.?/, '');
@@ -2212,7 +2212,7 @@ function downloadDocsPdf() {
   <p style="color:#666;font-size:13px;margin-bottom:30px;">Vollständige Anleitung zur Nutzung des GitDeploy-Tools<br>
   <span style="font-size:11px;color:#888;">Erstellt am: ${new Date().toLocaleDateString('de-DE')}</span></p>
   ${docsHtml}
-  <div class="footer">GitDeploy v3.2.0 – Aufzugshandwerk GmbH</div>
+  <div class="footer">GitDeploy v3.2.1 – Aufzugshandwerk GmbH</div>
   <script>setTimeout(() => window.print(), 500);<\/script>
 </body>
 </html>`);
@@ -2459,7 +2459,7 @@ function renderMain() {
         </div>
 
         <button class="deploy-btn" id="deployBtn" onclick="deploy()">
-          🚀 Deployen
+          🚀 Jetzt Deployen
         </button>
 
         <div class="progress-wrap" id="progressWrap">
