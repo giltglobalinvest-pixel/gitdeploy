@@ -8,7 +8,7 @@
 <meta name="apple-mobile-web-app-title" content="GitDeploy">
 <meta name="theme-color" content="#0d0d0d">
 <meta name="format-detection" content="telephone=no">
-<title>GitDeploy v3.1.7 · Wizard</title>
+<title>GitDeploy v3.2.0 · Wizard</title>
 <link href="https://fonts.googleapis.com/css2?family=DM+Mono:wght@400;500&family=Bricolage+Grotesque:wght@400;600;700;800&display=swap" rel="stylesheet">
 <style>
 :root {
@@ -884,7 +884,7 @@ body::after {
   <div class="logo">
     <button onclick="toggleMobileSidebar()" class="mobile-menu-btn" style="display:none;background:var(--surface2);border:1px solid var(--border2);color:var(--text);border-radius:8px;padding:6px 10px;font-size:16px;cursor:pointer;margin-right:8px;">☰</button>
     <div class="logo-mark">🚀</div>
-    <div class="logo-name">Git<span>Deploy</span> <span style="font-size:9px;color:var(--text3);font-family:var(--mono);">v3.1.7</span></div>
+    <div class="logo-name">Git<span>Deploy</span> <span style="font-size:9px;color:var(--text3);font-family:var(--mono);">v3.2.0</span></div>
   </div>
   <div class="token-status">
     <div class="token-dot" id="airtableStatusDot" style="background:var(--text3);" title="Airtable Verbindung"></div>
@@ -1265,6 +1265,7 @@ async function loadFromAirtable() {
             desc: f.desc || '',
             icon: f.icon || '🚀',
             archived: f.archived === true || f.archived === 'true',
+            localPath: f.local_path || '',
             versions: [],
             created: f.created || '',
             keys: {},
@@ -1273,6 +1274,7 @@ async function loadFromAirtable() {
           });
         } else {
           local.airtableRecordId = rec.id;
+          if (f.local_path && !local.localPath) local.localPath = f.local_path;
         }
       });
     }
@@ -1316,7 +1318,7 @@ async function loadFromAirtable() {
         });
       });
       // Sortiere Versionen pro Projekt semver-aware (älteste zuerst, neueste am Ende)
-      // Robust gegen Mischformate wie "v3.1.7", "3.1.1", "v10.0", "V3.0", "v.3.03"
+      // Robust gegen Mischformate wie "v3.2.0", "3.1.1", "v10.0", "V3.0", "v.3.03"
       const parseSemver = (s) => {
         if (!s) return [0, 0, 0];
         const cleaned = String(s).toLowerCase().replace(/^v\.?/, '');
@@ -1638,6 +1640,9 @@ async function saveProjectToAirtable(project) {
     };
     if (project.airtableBaseId) {
       fields.airtable_base_id = project.airtableBaseId;
+    }
+    if (project.localPath) {
+      fields.local_path = project.localPath;
     }
 
     if (project.airtableRecordId) {
@@ -2034,6 +2039,7 @@ async function migrateVersionTableSchema() {
         tableName: TABLE_PROJECTS,
         requiredFields: [
           { name: 'airtable_base_id', type: 'singleLineText' },
+          { name: 'local_path', type: 'singleLineText' },
         ],
       },
       {
@@ -2206,7 +2212,7 @@ function downloadDocsPdf() {
   <p style="color:#666;font-size:13px;margin-bottom:30px;">Vollständige Anleitung zur Nutzung des GitDeploy-Tools<br>
   <span style="font-size:11px;color:#888;">Erstellt am: ${new Date().toLocaleDateString('de-DE')}</span></p>
   ${docsHtml}
-  <div class="footer">GitDeploy v3.1.7 – Aufzugshandwerk GmbH</div>
+  <div class="footer">GitDeploy v3.2.0 – Aufzugshandwerk GmbH</div>
   <script>setTimeout(() => window.print(), 500);<\/script>
 </body>
 </html>`);
@@ -2375,6 +2381,18 @@ function renderMain() {
               <input class="field-input" type="text" id="editDesc" value="${project.desc||''}">
             </div>
 
+            <div class="field" style="margin-top:10px;">
+              <label class="field-label">💻 Lokaler Pfad zur HTML-Datei <span style="color:var(--text3);font-weight:normal;">(für CLI-Deploy in anderen Sessions)</span></label>
+              <input class="field-input" type="text" id="editLocalPath"
+                value="${escHtml(project.localPath||'')}"
+                placeholder="/Users/.../mein-projekt/index.html"
+                style="font-family:var(--mono);font-size:11px;">
+              <div style="font-size:10px;color:var(--text3);font-family:var(--mono);margin-top:4px;line-height:1.5;">
+                Tipp: In Finder die Datei mit <strong>Cmd+Option+C</strong> kopieren (kopiert absoluten Pfad), dann hier einfügen.<br>
+                Wird in Airtable gespeichert. Claude in jeder Session findet die Datei dann automatisch.
+              </div>
+            </div>
+
             <div style="font-size:9px;font-family:var(--mono);color:var(--text3);text-transform:uppercase;letter-spacing:1px;margin:14px 0 10px;padding-bottom:6px;border-bottom:1px solid var(--border);">🔑 API Keys</div>
             ${[
               {id:'anthropicKey', label:'Anthropic API Key', ph:'sk-ant-...', pw:true},
@@ -2399,6 +2417,27 @@ function renderMain() {
             </div>
           </div>
         </div>
+
+        <!-- Lokaler Pfad Status (für CLI-Deploy) -->
+        ${project.localPath ? `
+          <div style="background:rgba(0,230,118,0.06);border:1px solid rgba(0,230,118,0.3);border-radius:8px;padding:10px 14px;margin-bottom:12px;font-size:11px;font-family:var(--mono);color:var(--text2);display:flex;align-items:center;gap:10px;">
+            <span style="font-size:14px;">💻</span>
+            <div style="flex:1;min-width:0;">
+              <div style="color:var(--green);font-size:9px;text-transform:uppercase;letter-spacing:0.5px;margin-bottom:2px;">Lokaler Pfad gesetzt</div>
+              <div style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap;color:var(--text);">${escHtml(project.localPath)}</div>
+            </div>
+            <button onclick="toggleSettings()" style="background:none;border:1px solid var(--border2);color:var(--text3);border-radius:6px;padding:4px 8px;font-size:10px;cursor:pointer;flex-shrink:0;" title="Pfad ändern in Einstellungen">✏️</button>
+          </div>
+        ` : `
+          <div style="background:rgba(255,193,7,0.06);border:1px solid rgba(255,193,7,0.3);border-radius:8px;padding:10px 14px;margin-bottom:12px;font-size:11px;font-family:var(--mono);color:var(--text2);display:flex;align-items:center;gap:10px;">
+            <span style="font-size:14px;">⚠</span>
+            <div style="flex:1;">
+              <div style="color:var(--yellow);font-size:9px;text-transform:uppercase;letter-spacing:0.5px;margin-bottom:2px;">Lokaler Pfad nicht gesetzt</div>
+              <div style="color:var(--text2);">Für CLI-Deploy in anderen Sessions empfohlen</div>
+            </div>
+            <button onclick="toggleSettings()" style="background:var(--yellow);border:none;color:#000;border-radius:6px;padding:5px 10px;font-size:10px;font-weight:700;cursor:pointer;flex-shrink:0;font-family:var(--mono);">SETZEN</button>
+          </div>
+        `}
 
         <!-- File drop -->
         <div class="file-drop" id="fileDrop" ondragover="handleDrag(event)" ondragleave="handleDragLeave(event)" ondrop="handleDrop(event)">
@@ -2904,6 +2943,7 @@ function saveProjectSettings() {
   project.name = document.getElementById('editName')?.value?.trim() || project.name;
   project.repo = document.getElementById('editRepo')?.value?.trim() || project.repo;
   project.desc = document.getElementById('editDesc')?.value?.trim() || '';
+  project.localPath = document.getElementById('editLocalPath')?.value?.trim() || '';
   if (!project.keys) project.keys = {};
   ['anthropicKey','airtableTable'].forEach(k => {
     const val = document.getElementById('key_' + k)?.value?.trim();
