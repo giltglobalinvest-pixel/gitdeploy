@@ -2,8 +2,13 @@
 <html lang="de">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
-<title>GitDeploy v3.0.3 · Wizard</title>
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="GitDeploy">
+<meta name="theme-color" content="#0d0d0d">
+<meta name="format-detection" content="telephone=no">
+<title>GitDeploy v3.1 · Wizard</title>
 <link href="https://fonts.googleapis.com/css2?family=DM+Mono:wght@400;500&family=Bricolage+Grotesque:wght@400;600;700;800&display=swap" rel="stylesheet">
 <style>
 :root {
@@ -508,10 +513,10 @@ body::after {
 .emoji-opt { aspect-ratio:1; border-radius:6px; border:1px solid var(--border); background:var(--surface2); display:flex; align-items:center; justify-content:center; font-size:16px; cursor:pointer; transition:all 0.1s; }
 .emoji-opt:hover, .emoji-opt.selected { border-color:var(--green); background:rgba(0,230,118,0.08); }
 
-@media(max-width:600px) {
+@media(max-width:768px) {
   .layout { grid-template-columns:1fr; }
-  .sidebar { 
-    display:none; 
+  .sidebar {
+    display:none;
     position:fixed;
     inset:0;
     top:61px;
@@ -519,14 +524,89 @@ body::after {
     background:var(--bg);
     padding:16px;
     overflow-y:auto;
+    padding-bottom:calc(20px + env(safe-area-inset-bottom));
   }
   .sidebar.mobile-open { display:block; }
-  .main { padding:16px; }
+  .main { padding:14px; padding-bottom:calc(20px + env(safe-area-inset-bottom)); }
   .mobile-menu-btn { display:flex !important; }
+
+  /* iOS Safari: verhindert Auto-Zoom beim Tap auf Inputs (font-size MUSS >= 16px sein) */
+  .field-input,
+  input[type="text"],
+  input[type="password"],
+  input[type="email"],
+  input[type="number"],
+  input[type="search"],
+  input[type="url"],
+  textarea,
+  select {
+    font-size:16px !important;
+  }
+
+  /* Größere Touch-Targets (Apple HIG: min 44x44pt) */
+  button, .btn-save, .btn-cancel, .deploy-btn, .snippet-btn, .vbtn {
+    min-height:44px;
+  }
+
+  /* Stack alle 2-Spalten-Grids */
+  [style*="grid-template-columns:1fr 1fr"],
+  [style*="grid-template-columns: 1fr 1fr"] {
+    grid-template-columns:1fr !important;
+  }
+
+  /* 3-Spalten Sidebar-Filter etc. bleiben, aber kleiner */
+  .sidebar-tabs button { font-size:11px; padding:8px 4px; }
+
+  /* Modal: vollformatig mit Bottom-Sheet Style */
+  .overlay { align-items:flex-end; }
+  .modal {
+    width:100% !important;
+    max-width:none !important;
+    border-radius:20px 20px 0 0 !important;
+    margin:0 !important;
+    max-height:92vh !important;
+    padding-bottom:calc(40px + env(safe-area-inset-bottom)) !important;
+  }
+  .modal-title { font-size:20px; }
+
+  /* Header: Titel kürzer */
+  .logo-name { font-size:14px; }
+
+  /* Toast: Mobil etwas höher (über Bottom-Bar/Notch) */
+  .toast {
+    bottom:calc(20px + env(safe-area-inset-bottom));
+    max-width:90vw;
+    white-space:normal;
+    text-align:center;
+  }
+
+  /* Versionsarchiv + Snippet-Boxen: horizontal scroll erlauben statt Overflow */
+  .versions-box, .snippet-box {
+    max-width:100%;
+    overflow-x:auto;
+  }
+
+  /* Code-Blöcke nicht über Bildschirmbreite hinaus */
+  pre, code {
+    max-width:100%;
+    overflow-x:auto;
+    white-space:pre-wrap;
+    word-break:break-word;
+  }
 }
-@media(min-width:768px) {
+
+@media(min-width:769px) {
   .overlay { align-items:center; }
   .modal { border-radius:20px; margin:20px; max-height:85vh; }
+}
+
+/* Safe-Area für Notch (iPhone X+) */
+@supports(padding:env(safe-area-inset-top)) {
+  .topbar {
+    padding-top:calc(12px + env(safe-area-inset-top));
+    padding-left:calc(16px + env(safe-area-inset-left));
+    padding-right:calc(16px + env(safe-area-inset-right));
+  }
 }
 
 /* ── USER MANAGEMENT ── */
@@ -741,7 +821,7 @@ body::after {
   <div class="logo">
     <button onclick="toggleMobileSidebar()" class="mobile-menu-btn" style="display:none;background:var(--surface2);border:1px solid var(--border2);color:var(--text);border-radius:8px;padding:6px 10px;font-size:16px;cursor:pointer;margin-right:8px;">☰</button>
     <div class="logo-mark">🚀</div>
-    <div class="logo-name">Git<span>Deploy</span> <span style="font-size:9px;color:var(--text3);font-family:var(--mono);">v3.0.3</span></div>
+    <div class="logo-name">Git<span>Deploy</span> <span style="font-size:9px;color:var(--text3);font-family:var(--mono);">v3.1</span></div>
   </div>
   <div class="token-status">
     <div class="token-dot" id="airtableStatusDot" style="background:var(--text3);" title="Airtable Verbindung"></div>
@@ -2044,7 +2124,7 @@ function downloadDocsPdf() {
   <p style="color:#666;font-size:13px;margin-bottom:30px;">Vollständige Anleitung zur Nutzung des GitDeploy-Tools<br>
   <span style="font-size:11px;color:#888;">Erstellt am: ${new Date().toLocaleDateString('de-DE')}</span></p>
   ${docsHtml}
-  <div class="footer">GitDeploy v3.0.3 – Aufzugshandwerk GmbH</div>
+  <div class="footer">GitDeploy v3.1 – Aufzugshandwerk GmbH</div>
   <script>setTimeout(() => window.print(), 500);<\/script>
 </body>
 </html>`);
