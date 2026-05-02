@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
-<title>GitDeploy v2.4 · Wizard</title>
+<title>GitDeploy v2.4.33 · Wizard</title>
 <link href="https://fonts.googleapis.com/css2?family=DM+Mono:wght@400;500&family=Bricolage+Grotesque:wght@400;600;700;800&display=swap" rel="stylesheet">
 <style>
 :root {
@@ -741,7 +741,7 @@ body::after {
   <div class="logo">
     <button onclick="toggleMobileSidebar()" class="mobile-menu-btn" style="display:none;background:var(--surface2);border:1px solid var(--border2);color:var(--text);border-radius:8px;padding:6px 10px;font-size:16px;cursor:pointer;margin-right:8px;">☰</button>
     <div class="logo-mark">🚀</div>
-    <div class="logo-name">Git<span>Deploy</span> <span style="font-size:9px;color:var(--text3);font-family:var(--mono);">v2.4</span></div>
+    <div class="logo-name">Git<span>Deploy</span> <span style="font-size:9px;color:var(--text3);font-family:var(--mono);">v2.4.33</span></div>
   </div>
   <div class="token-status">
     <div class="token-dot" id="airtableStatusDot" style="background:var(--text3);" title="Airtable Verbindung"></div>
@@ -1957,7 +1957,7 @@ function downloadDocsPdf() {
   <p style="color:#666;font-size:13px;margin-bottom:30px;">Vollständige Anleitung zur Nutzung des GitDeploy-Tools<br>
   <span style="font-size:11px;color:#888;">Erstellt am: ${new Date().toLocaleDateString('de-DE')}</span></p>
   ${docsHtml}
-  <div class="footer">GitDeploy v2.4 – Aufzugshandwerk GmbH</div>
+  <div class="footer">GitDeploy v2.4.33 – Aufzugshandwerk GmbH</div>
   <script>setTimeout(() => window.print(), 500);<\/script>
 </body>
 </html>`);
@@ -2263,6 +2263,7 @@ function renderMain() {
           </div>
         </div>`;
       }
+      const loaderUrl = project.loaderUrl || '';
       return `<div class="snippet-box" style="border-color:rgba(0,230,118,0.4);">
         <div class="snippet-header">
           <div class="snippet-title" style="color:var(--green);">// 📦 Loader-Datei für User</div>
@@ -2281,6 +2282,23 @@ function renderMain() {
         <div class="snippet-actions">
           <button class="snippet-btn green" onclick="downloadLoader('${project.id}')">📥 ${escHtml(project.name||'app')}.html herunterladen</button>
         </div>
+        <hr style="border:none;border-top:1px solid rgba(255,255,255,0.08);margin:14px 0;">
+        <div class="snippet-header" style="margin-top:6px;">
+          <div class="snippet-title" style="color:var(--green);">// 📱 Loader online (Handy-tauglich)</div>
+          <button class="snippet-btn green" onclick="deployLoaderToPages('${project.id}')">🌐 Loader online stellen</button>
+        </div>
+        <div class="snippet-info">
+          Statt der Loader-Datei verteilst du eine <strong>URL</strong>. Auf dem Handy einfach öffnen und auf den Home-Screen pinnen – sieht aus wie eine echte App.<br>
+          <br>
+          <em>Hinweis: GitHub Pages braucht nach dem ersten Deploy 1-2 Minuten bis die URL erreichbar ist.</em>
+        </div>
+        ${loaderUrl ? `<div class="snippet-actions" style="flex-direction:column;align-items:stretch;gap:6px;">
+          <div style="display:flex;gap:6px;align-items:center;">
+            <input type="text" readonly value="${escHtml(loaderUrl)}" id="loaderUrlInput_${project.id}" style="flex:1;padding:8px 12px;background:#0d0d0d;border:1px solid #2a2a2a;border-radius:6px;color:var(--green);font-family:var(--mono);font-size:12px;">
+            <button class="snippet-btn" onclick="copyLoaderUrl('${project.id}')" title="In Zwischenablage kopieren">📋</button>
+            <a href="${escHtml(loaderUrl)}" target="_blank" class="snippet-btn green" style="text-decoration:none;display:inline-flex;align-items:center;">↗ Öffnen</a>
+          </div>
+        </div>` : ''}
       </div>`;
     })()}`;
 
@@ -2460,7 +2478,60 @@ async function deploy() {
     }, cfg.token);
     // Ignore if already enabled
 
-    setProgress(100, 'Fertig!');
+    // Polling: Warte bis raw.githubusercontent.com die NEUE Version wirklich ausliefert
+    // (GitHub-Backend braucht oft 5-30s nach PUT bis CDN repliziert hat)
+    // Strategie: 2-Stufen-Check
+    //   1) Commits API muss den neuen Commit-SHA als jüngsten für die Datei melden
+    //   2) raw.githubusercontent.com muss exakt unseren Inhalt zurückliefern
+    setProgress(80, 'Warte auf GitHub...');
+    const newCommitSha = uploadRes.data.commit?.sha || '';
+    const rawCheckUrl = `https://raw.githubusercontent.com/${cfg.username}/${project.repo}/main/index.html`;
+    const commitsApiUrl = `/repos/${cfg.username}/${project.repo}/commits?path=index.html&per_page=1`;
+    const MAX_ATTEMPTS = 40;
+    const DELAY_MS = 1500;
+    let liveConfirmed = false;
+    let commitConfirmed = false;
+    let lastReason = '';
+    for (let attempt = 1; attempt <= MAX_ATTEMPTS; attempt++) {
+      setProgress(80 + Math.floor((attempt / MAX_ATTEMPTS) * 19),
+        `Warte auf GitHub... (Versuch ${attempt}/${MAX_ATTEMPTS})`);
+      try {
+        // Stufe 1: Commits API – ist unser Commit der jüngste?
+        if (!commitConfirmed && newCommitSha) {
+          const commitsRes = await ghAPI(commitsApiUrl, 'GET', null, cfg.token);
+          if (commitsRes.ok && Array.isArray(commitsRes.data) && commitsRes.data.length) {
+            if (commitsRes.data[0].sha === newCommitSha) {
+              commitConfirmed = true;
+            } else {
+              lastReason = 'Commits API meldet noch alten SHA';
+            }
+          }
+        }
+        // Stufe 2: raw.githubusercontent.com liefert exakt unseren Inhalt
+        if (commitConfirmed || !newCommitSha) {
+          const checkRes = await fetch(rawCheckUrl + '?t=' + Date.now(), { cache: 'no-store' });
+          if (checkRes.ok) {
+            const fetched = await checkRes.text();
+            if (fetched === content) {
+              liveConfirmed = true;
+              break;
+            } else {
+              lastReason = 'CDN liefert noch nicht den neuen Inhalt (' + fetched.length + ' vs ' + content.length + ' Bytes)';
+            }
+          } else {
+            lastReason = 'CDN antwortet HTTP ' + checkRes.status;
+          }
+        }
+      } catch(e) {
+        lastReason = 'Netzwerk-Fehler: ' + e.message;
+      }
+      await new Promise(r => setTimeout(r, DELAY_MS));
+    }
+    if (!liveConfirmed) {
+      console.warn('Live-Check nach ' + MAX_ATTEMPTS + ' Versuchen nicht bestätigt. Letzter Grund: ' + lastReason);
+    }
+
+    setProgress(100, liveConfirmed ? 'Fertig – Version ist live!' : 'Upload OK – CDN braucht noch etwas (' + lastReason + ')');
 
     // GitHub URLs für die Version berechnen
     // WICHTIG: Datei wurde immer als 'index.html' hochgeladen (siehe Zeile 2419)
@@ -3514,7 +3585,7 @@ function generateLoaderHtml(project) {
   const icon = project.icon || '🚀';
 
   // Loader HTML als Base64 Template (vermeidet ALLE Escaping-Probleme mit nested templates)
-  const template = atob('PCFET0NUWVBFIGh0bWw+CjxodG1sIGxhbmc9ImRlIj4KPGhlYWQ+CjxtZXRhIGNoYXJzZXQ9IlVURi04Ij4KPG1ldGEgbmFtZT0idmlld3BvcnQiIGNvbnRlbnQ9IndpZHRoPWRldmljZS13aWR0aCwgaW5pdGlhbC1zY2FsZT0xLjAiPgo8dGl0bGU+X19QUk9KRUNUX05BTUVfXzwvdGl0bGU+CjxzdHlsZT4KKnttYXJnaW46MDtwYWRkaW5nOjA7Ym94LXNpemluZzpib3JkZXItYm94O30KaHRtbCxib2R5e2hlaWdodDoxMDAlO2ZvbnQtZmFtaWx5Oi1hcHBsZS1zeXN0ZW0sc3lzdGVtLXVpLFNlZ29lIFVJLFJvYm90byxzYW5zLXNlcmlmO30KYm9keXtkaXNwbGF5OmZsZXg7YWxpZ24taXRlbXM6Y2VudGVyO2p1c3RpZnktY29udGVudDpjZW50ZXI7YmFja2dyb3VuZDojMGQwZDBkO2NvbG9yOiNmZmY7fQoubG9hZGVye3RleHQtYWxpZ246Y2VudGVyO3BhZGRpbmc6MzBweDttYXgtd2lkdGg6NDAwcHg7fQouaWNvbntmb250LXNpemU6NjRweDttYXJnaW4tYm90dG9tOjIwcHg7fQoudGl0bGV7Zm9udC1zaXplOjI0cHg7Zm9udC13ZWlnaHQ6NzAwO21hcmdpbi1ib3R0b206OHB4O30KLnN1Yntmb250LXNpemU6MTNweDtjb2xvcjojODg4O21hcmdpbi1ib3R0b206MjRweDt9Ci5zcGlubmVye3dpZHRoOjMycHg7aGVpZ2h0OjMycHg7Ym9yZGVyOjNweCBzb2xpZCAjMzMzO2JvcmRlci10b3AtY29sb3I6IzAwZTY3Njtib3JkZXItcmFkaXVzOjUwJTthbmltYXRpb246c3BpbiAwLjhzIGxpbmVhciBpbmZpbml0ZTttYXJnaW46MCBhdXRvIDE2cHg7fQpAa2V5ZnJhbWVzIHNwaW57dG97dHJhbnNmb3JtOnJvdGF0ZSgzNjBkZWcpO319Ci5zdGF0dXN7Zm9udC1mYW1pbHk6bW9ub3NwYWNlO2ZvbnQtc2l6ZToxMXB4O2NvbG9yOiM2NjY7fQouZXJye2NvbG9yOiNmZjUyNTI7YmFja2dyb3VuZDojMmExMDEwO3BhZGRpbmc6MTJweCAxNnB4O2JvcmRlci1yYWRpdXM6OHB4O2JvcmRlcjoxcHggc29saWQgIzVhMjAyMDttYXJnaW4tdG9wOjEycHg7Zm9udC1zaXplOjEycHg7dGV4dC1hbGlnbjpsZWZ0O2xpbmUtaGVpZ2h0OjEuNTt9Ci5idG57ZGlzcGxheTppbmxpbmUtYmxvY2s7bWFyZ2luOjE0cHggNHB4IDA7cGFkZGluZzo4cHggMThweDtiYWNrZ3JvdW5kOiMwMGU2NzY7Y29sb3I6IzBkMGQwZDtib3JkZXI6bm9uZTtib3JkZXItcmFkaXVzOjhweDtmb250LXdlaWdodDo3MDA7Y3Vyc29yOnBvaW50ZXI7dGV4dC1kZWNvcmF0aW9uOm5vbmU7Zm9udC1zaXplOjEzcHg7fQouYnRuLmdyYXl7YmFja2dyb3VuZDojODg4O2NvbG9yOiNmZmY7fQo8L3N0eWxlPgo8L2hlYWQ+Cjxib2R5Pgo8ZGl2IGNsYXNzPSJsb2FkZXIiIGlkPSJsb2FkZXIiPgo8ZGl2IGNsYXNzPSJpY29uIj5fX0lDT05fXzwvZGl2Pgo8ZGl2IGNsYXNzPSJ0aXRsZSI+X19QUk9KRUNUX05BTUVfXzwvZGl2Pgo8ZGl2IGNsYXNzPSJzdWIiPkxhZGUgbmV1ZXN0ZSBWZXJzaW9uLi4uPC9kaXY+CjxkaXYgY2xhc3M9InNwaW5uZXIiPjwvZGl2Pgo8ZGl2IGNsYXNzPSJzdGF0dXMiIGlkPSJzdGF0dXMiPlZlcmJpbmRlIG1pdCBTZXJ2ZXI8L2Rpdj4KPC9kaXY+CjxzY3JpcHQ+Cihhc3luYyBmdW5jdGlvbigpewp2YXIgUkVQTz0nX19VU0VSTkFNRV9fL19fUkVQT19fJzsKdmFyIEZJTEVOQU1FPSdpbmRleC5odG1sJzsKdmFyIHN0YXR1c0VsPWRvY3VtZW50LmdldEVsZW1lbnRCeUlkKCdzdGF0dXMnKTsKZnVuY3Rpb24gc2V0U3RhdHVzKG1zZyl7aWYoc3RhdHVzRWwpc3RhdHVzRWwudGV4dENvbnRlbnQ9bXNnO30KZnVuY3Rpb24gc2hvd0Vycm9yKG1zZyxoaW50KXsKdmFyIGh0bWw9JzxkaXYgY2xhc3M9Imljb24iPldBUk48L2Rpdj4nOwpodG1sKz0nPGRpdiBjbGFzcz0idGl0bGUiPlZlcmJpbmR1bmcgZmVobGdlc2NobGFnZW48L2Rpdj4nOwpodG1sKz0nPGRpdiBjbGFzcz0iZXJyIj4nK21zZysoaGludD8nPGJyPjxicj48c3Ryb25nPlRpcHA6PC9zdHJvbmc+ICcraGludDonJykrJzwvZGl2Pic7Cmh0bWwrPSc8YnV0dG9uIGNsYXNzPSJidG4iIG9uY2xpY2s9ImxvY2F0aW9uLnJlbG9hZCgpIj5Fcm5ldXQgdmVyc3VjaGVuPC9idXR0b24+JzsKaWYod2luZG93Ll9jYWNoZWRBcHApaHRtbCs9JzxidXR0b24gY2xhc3M9ImJ0biBncmF5IiBvbmNsaWNrPSJsb2FkQ2FjaGVkKCkiPk9mZmxpbmUtVmVyc2lvbjwvYnV0dG9uPic7CmRvY3VtZW50LmdldEVsZW1lbnRCeUlkKCdsb2FkZXInKS5pbm5lckhUTUw9aHRtbDsKfQp3aW5kb3cubG9hZENhY2hlZD1mdW5jdGlvbigpe2lmKHdpbmRvdy5fY2FjaGVkQXBwKXtkb2N1bWVudC5vcGVuKCk7ZG9jdW1lbnQud3JpdGUod2luZG93Ll9jYWNoZWRBcHApO2RvY3VtZW50LmNsb3NlKCk7fX07CnZhciBjYWNoZUtleT0nYXBwX2NhY2hlXycrUkVQTyxjYWNoZWRIdG1sPW51bGwsY2FjaGVkQXQ9bnVsbDsKdHJ5e2NhY2hlZEh0bWw9bG9jYWxTdG9yYWdlLmdldEl0ZW0oY2FjaGVLZXkpO2NhY2hlZEF0PWxvY2FsU3RvcmFnZS5nZXRJdGVtKGNhY2hlS2V5KydfYXQnKTt9Y2F0Y2goZSl7fQppZihjYWNoZWRIdG1sKXdpbmRvdy5fY2FjaGVkQXBwPWNhY2hlZEh0bWw7CgovLyBUcnkgbXVsdGlwbGUgc291cmNlcyBpbiBvcmRlcjogR2l0SHViIEFQSSAobm8gY2FjaGUpIC0+IGpzRGVsaXZyIChwdXJnZSBmcmllbmRseSkgLT4gcmF3LmdpdGhhY2sKdmFyIHNvdXJjZXM9Wwp7bmFtZTonR2l0SHViIEFQSScsdXJsOidodHRwczovL2FwaS5naXRodWIuY29tL3JlcG9zLycrUkVQTysnL2NvbnRlbnRzLycrRklMRU5BTUUrJz9yZWY9bWFpbiZ0PScrRGF0ZS5ub3coKSxpc0FwaTp0cnVlfSwKe25hbWU6J2pzRGVsaXZyJyx1cmw6J2h0dHBzOi8vY2RuLmpzZGVsaXZyLm5ldC9naC8nK1JFUE8rJ0BtYWluLycrRklMRU5BTUUrJz90PScrRGF0ZS5ub3coKX0sCntuYW1lOidyYXcuZ2l0aGFjaycsdXJsOidodHRwczovL3Jhdy5naXRoYWNrLmNvbS8nK1JFUE8rJy9tYWluLycrRklMRU5BTUUrJz90PScrRGF0ZS5ub3coKX0KXTsKCmFzeW5jIGZ1bmN0aW9uIGxvYWRGcm9tU291cmNlKHNyYyl7CnNldFN0YXR1cygnTGFkZSB2b24gJytzcmMubmFtZSk7CnZhciByZXM9YXdhaXQgZmV0Y2goc3JjLnVybCx7Y2FjaGU6J25vLXN0b3JlJyxoZWFkZXJzOnNyYy5pc0FwaT97J0FjY2VwdCc6J2FwcGxpY2F0aW9uL3ZuZC5naXRodWIudjMucmF3J306e319KTsKaWYoIXJlcy5vayl0aHJvdyBuZXcgRXJyb3IoJ0hUVFAgJytyZXMuc3RhdHVzKTsKdmFyIGh0bWw9YXdhaXQgcmVzLnRleHQoKTsKaWYoIWh0bWx8fGh0bWwubGVuZ3RoPDEwMCl0aHJvdyBuZXcgRXJyb3IoJ0RhdGVpIGxlZXInKTsKcmV0dXJuIGh0bWw7Cn0KCnZhciBodG1sPW51bGwsbGFzdEVycj1udWxsOwpmb3IodmFyIGk9MDtpPHNvdXJjZXMubGVuZ3RoO2krKyl7CnRyeXtodG1sPWF3YWl0IGxvYWRGcm9tU291cmNlKHNvdXJjZXNbaV0pO2JyZWFrO30KY2F0Y2goZSl7bGFzdEVycj1lO2NvbnNvbGUud2Fybihzb3VyY2VzW2ldLm5hbWUrJyBmYWlsZWQ6JyxlLm1lc3NhZ2UpO30KfQoKaWYoaHRtbCl7CnRyeXtsb2NhbFN0b3JhZ2Uuc2V0SXRlbShjYWNoZUtleSxodG1sKTtsb2NhbFN0b3JhZ2Uuc2V0SXRlbShjYWNoZUtleSsnX2F0JyxuZXcgRGF0ZSgpLnRvSVNPU3RyaW5nKCkpO31jYXRjaChlKXt9CnNldFN0YXR1cygnU3RhcnRlIEFwcCcpOwpzZXRUaW1lb3V0KGZ1bmN0aW9uKCl7ZG9jdW1lbnQub3BlbigpO2RvY3VtZW50LndyaXRlKGh0bWwpO2RvY3VtZW50LmNsb3NlKCk7fSwyMDApOwp9ZWxzZXsKY29uc29sZS5lcnJvcignQWxsIHNvdXJjZXMgZmFpbGVkLiBMYXN0IGVycm9yOicsbGFzdEVycik7CmlmKGNhY2hlZEh0bWwpewpzZXRTdGF0dXMoJ09mZmxpbmUtTW9kdXMnKTsKdmFyIGQ9Y2FjaGVkQXQ/bmV3IERhdGUoY2FjaGVkQXQpLnRvTG9jYWxlU3RyaW5nKCdkZS1ERScpOid1bmJla2FubnQnOwp2YXIgYj0nPGRpdiBzdHlsZT0icG9zaXRpb246Zml4ZWQ7dG9wOjA7bGVmdDowO3JpZ2h0OjA7YmFja2dyb3VuZDojZmY5ODAwO2NvbG9yOiMwMDA7cGFkZGluZzo4cHg7dGV4dC1hbGlnbjpjZW50ZXI7Zm9udC1mYW1pbHk6c2Fucy1zZXJpZjtmb250LXNpemU6MTJweDt6LWluZGV4Ojk5OTk5OyI+T2ZmbGluZS1Nb2R1cyAtIExldHp0ZSBWZXJzaW9uIHZvbSAnK2QrJyAtIDxhIGhyZWY9ImphdmFzY3JpcHQ6bG9jYXRpb24ucmVsb2FkKCkiIHN0eWxlPSJjb2xvcjojMDAwO2ZvbnQtd2VpZ2h0OjcwMDsiPkVybmV1dCB2ZXJiaW5kZW48L2E+PC9kaXY+JzsKc2V0VGltZW91dChmdW5jdGlvbigpe2RvY3VtZW50Lm9wZW4oKTtkb2N1bWVudC53cml0ZShjYWNoZWRIdG1sLnJlcGxhY2UoJzxib2R5JyxiKyc8Ym9keScpKTtkb2N1bWVudC5jbG9zZSgpO30sMjAwKTsKfWVsc2V7CnNob3dFcnJvcignS29ubnRlIEFwcCBuaWNodCBsYWRlbjogJysobGFzdEVycj9sYXN0RXJyLm1lc3NhZ2U6J1VuYmVrYW5udGVyIEZlaGxlcicpLCdQcnVlZmUgZGVpbmUgSW50ZXJuZXR2ZXJiaW5kdW5nLicpOwp9Cn0KfSkoKTsKPC9zY3JpcHQ+CjwvYm9keT4KPC9odG1sPg==');
+  const template = atob('PCFET0NUWVBFIGh0bWw+CjxodG1sIGxhbmc9ImRlIj4KPGhlYWQ+CjxtZXRhIGNoYXJzZXQ9IlVURi04Ij4KPG1ldGEgbmFtZT0idmlld3BvcnQiIGNvbnRlbnQ9IndpZHRoPWRldmljZS13aWR0aCwgaW5pdGlhbC1zY2FsZT0xLjAiPgo8dGl0bGU+X19QUk9KRUNUX05BTUVfXzwvdGl0bGU+CjxzdHlsZT4KKnttYXJnaW46MDtwYWRkaW5nOjA7Ym94LXNpemluZzpib3JkZXItYm94O30KaHRtbCxib2R5e2hlaWdodDoxMDAlO2ZvbnQtZmFtaWx5Oi1hcHBsZS1zeXN0ZW0sc3lzdGVtLXVpLFNlZ29lIFVJLFJvYm90byxzYW5zLXNlcmlmO30KYm9keXtkaXNwbGF5OmZsZXg7YWxpZ24taXRlbXM6Y2VudGVyO2p1c3RpZnktY29udGVudDpjZW50ZXI7YmFja2dyb3VuZDojMGQwZDBkO2NvbG9yOiNmZmY7fQoubG9hZGVye3RleHQtYWxpZ246Y2VudGVyO3BhZGRpbmc6MzBweDttYXgtd2lkdGg6NDIwcHg7d2lkdGg6MTAwJTt9Ci5pY29ue2ZvbnQtc2l6ZTo1NnB4O21hcmdpbi1ib3R0b206MTZweDt9Ci50aXRsZXtmb250LXNpemU6MjJweDtmb250LXdlaWdodDo3MDA7bWFyZ2luLWJvdHRvbTo2cHg7fQouc3Vie2ZvbnQtc2l6ZToxM3B4O2NvbG9yOiM4ODg7bWFyZ2luLWJvdHRvbToyMHB4O30KLnNwaW5uZXJ7d2lkdGg6MzJweDtoZWlnaHQ6MzJweDtib3JkZXI6M3B4IHNvbGlkICMzMzM7Ym9yZGVyLXRvcC1jb2xvcjojMDBlNjc2O2JvcmRlci1yYWRpdXM6NTAlO2FuaW1hdGlvbjpzcGluIDAuOHMgbGluZWFyIGluZmluaXRlO21hcmdpbjowIGF1dG8gMTZweDt9CkBrZXlmcmFtZXMgc3Bpbnt0b3t0cmFuc2Zvcm06cm90YXRlKDM2MGRlZyk7fX0KLnN0YXR1c3tmb250LWZhbWlseTptb25vc3BhY2U7Zm9udC1zaXplOjExcHg7Y29sb3I6IzY2Njt9Ci5lcnJ7Y29sb3I6I2ZmNTI1MjtiYWNrZ3JvdW5kOiMyYTEwMTA7cGFkZGluZzoxMnB4IDE2cHg7Ym9yZGVyLXJhZGl1czo4cHg7Ym9yZGVyOjFweCBzb2xpZCAjNWEyMDIwO21hcmdpbi10b3A6MTJweDtmb250LXNpemU6MTJweDt0ZXh0LWFsaWduOmxlZnQ7bGluZS1oZWlnaHQ6MS41O30KLmJ0bntkaXNwbGF5OmlubGluZS1ibG9jazttYXJnaW46OHB4IDRweCAwO3BhZGRpbmc6OHB4IDE4cHg7YmFja2dyb3VuZDojMDBlNjc2O2NvbG9yOiMwZDBkMGQ7Ym9yZGVyOm5vbmU7Ym9yZGVyLXJhZGl1czo4cHg7Zm9udC13ZWlnaHQ6NzAwO2N1cnNvcjpwb2ludGVyO3RleHQtZGVjb3JhdGlvbjpub25lO2ZvbnQtc2l6ZToxM3B4O2ZvbnQtZmFtaWx5OmluaGVyaXQ7fQouYnRuLmdyYXl7YmFja2dyb3VuZDojODg4O2NvbG9yOiNmZmY7fQoudmxpc3R7bWF4LWhlaWdodDo1MHZoO292ZXJmbG93LXk6YXV0bzttYXJnaW46OHB4IDA7cGFkZGluZzo0cHg7YmFja2dyb3VuZDojMTYxNjE2O2JvcmRlcjoxcHggc29saWQgIzIyMjtib3JkZXItcmFkaXVzOjEwcHg7fQoudmxpc3Q6Oi13ZWJraXQtc2Nyb2xsYmFye3dpZHRoOjhweDt9Ci52bGlzdDo6LXdlYmtpdC1zY3JvbGxiYXItdHJhY2t7YmFja2dyb3VuZDojMGQwZDBkO30KLnZsaXN0Ojotd2Via2l0LXNjcm9sbGJhci10aHVtYntiYWNrZ3JvdW5kOiMzMzM7Ym9yZGVyLXJhZGl1czo0cHg7fQoudmJ0bntkaXNwbGF5OmJsb2NrO3dpZHRoOjEwMCU7bWFyZ2luOjRweCAwO3BhZGRpbmc6MTJweCAxNnB4O2JhY2tncm91bmQ6IzFmMWYxZjtjb2xvcjojZmZmO2JvcmRlcjoxcHggc29saWQgIzJhMmEyYTtib3JkZXItcmFkaXVzOjhweDtmb250LXdlaWdodDo2MDA7Y3Vyc29yOnBvaW50ZXI7Zm9udC1zaXplOjE0cHg7Zm9udC1mYW1pbHk6aW5oZXJpdDt0ZXh0LWFsaWduOmxlZnQ7dHJhbnNpdGlvbjphbGwgMC4xNXM7fQoudmJ0bjpob3ZlcntiYWNrZ3JvdW5kOiMwMGU2NzY7Y29sb3I6IzBkMGQwZDtib3JkZXItY29sb3I6IzAwZTY3Njt9Ci52ZW1wdHl7cGFkZGluZzoyMHB4O2NvbG9yOiM2NjY7Zm9udC1zaXplOjEycHg7fQo8L3N0eWxlPgo8L2hlYWQ+Cjxib2R5Pgo8ZGl2IGNsYXNzPSJsb2FkZXIiIGlkPSJsb2FkZXIiPgo8ZGl2IGNsYXNzPSJpY29uIj5fX0lDT05fXzwvZGl2Pgo8ZGl2IGNsYXNzPSJ0aXRsZSI+X19QUk9KRUNUX05BTUVfXzwvZGl2Pgo8ZGl2IGNsYXNzPSJzdWIiPlfDpGhsZSBlaW5lIFZlcnNpb248L2Rpdj4KPGRpdiBpZD0iY29udGVudCI+CjxkaXYgY2xhc3M9InNwaW5uZXIiPjwvZGl2Pgo8ZGl2IGNsYXNzPSJzdGF0dXMiIGlkPSJzdGF0dXMiPkxhZGUgVmVyc2lvbnNsaXN0ZS4uLjwvZGl2Pgo8L2Rpdj4KPC9kaXY+CjxzY3JpcHQ+Cihhc3luYyBmdW5jdGlvbigpewp2YXIgUkVQTz0nX19VU0VSTkFNRV9fL19fUkVQT19fJzsKdmFyIEZJTEVOQU1FPSdpbmRleC5odG1sJzsKdmFyIFBPTExfTUlOPTU7CnZhciBjb250ZW50RWw9ZG9jdW1lbnQuZ2V0RWxlbWVudEJ5SWQoJ2NvbnRlbnQnKTsKdmFyIHN0YXR1c0VsPWRvY3VtZW50LmdldEVsZW1lbnRCeUlkKCdzdGF0dXMnKTsKZnVuY3Rpb24gc2V0U3RhdHVzKG1zZyl7aWYoc3RhdHVzRWwmJnN0YXR1c0VsLnBhcmVudE5vZGUpc3RhdHVzRWwudGV4dENvbnRlbnQ9bXNnO30KZnVuY3Rpb24gZXNjSHRtbChzKXtyZXR1cm4gU3RyaW5nKHMpLnJlcGxhY2UoL1smPD4iJ10vZyxmdW5jdGlvbihjKXtyZXR1cm4geycmJzonJmFtcDsnLCc8JzonJmx0OycsJz4nOicmZ3Q7JywnIic6JyZxdW90OycsIiciOicmIzM5Oyd9W2NdO30pO30KZnVuY3Rpb24gc2hvd0Vycm9yKG1zZyxoaW50LGFsbG93Q2FjaGVkKXsKdmFyIGh0bWw9JzxkaXYgY2xhc3M9ImVyciI+Jytlc2NIdG1sKG1zZykrKGhpbnQ/Jzxicj48YnI+PHN0cm9uZz5UaXBwOjwvc3Ryb25nPiAnK2VzY0h0bWwoaGludCk6JycpKyc8L2Rpdj4nOwpodG1sKz0nPGJ1dHRvbiBjbGFzcz0iYnRuIiBvbmNsaWNrPSJsb2NhdGlvbi5yZWxvYWQoKSI+RXJuZXV0IHZlcnN1Y2hlbjwvYnV0dG9uPic7CmlmKGFsbG93Q2FjaGVkJiZ3aW5kb3cuX2NhY2hlZEFwcClodG1sKz0nPGJ1dHRvbiBjbGFzcz0iYnRuIGdyYXkiIG9uY2xpY2s9ImxvYWRDYWNoZWQoKSI+R2VjYWNodGUgVmVyc2lvbiBzdGFydGVuPC9idXR0b24+JzsKY29udGVudEVsLmlubmVySFRNTD1odG1sOwp9CndpbmRvdy5sb2FkQ2FjaGVkPWZ1bmN0aW9uKCl7aWYod2luZG93Ll9jYWNoZWRBcHApe2RvY3VtZW50Lm9wZW4oKTtkb2N1bWVudC53cml0ZSh3aW5kb3cuX2NhY2hlZEFwcCk7ZG9jdW1lbnQuY2xvc2UoKTt9fTsKdmFyIGNhY2hlS2V5PSdhcHBfY2FjaGVfJytSRVBPOwp0cnl7dmFyIGM9bG9jYWxTdG9yYWdlLmdldEl0ZW0oY2FjaGVLZXkpO2lmKGMpd2luZG93Ll9jYWNoZWRBcHA9Yzt9Y2F0Y2goZSl7fQpmdW5jdGlvbiBpbmplY3RNb25pdG9yKGh0bWwpewp2YXIgbW9uPSc8c2NyaXB0PihmdW5jdGlvbigpe3RyeXt2YXIgUj0iJytSRVBPKyciLEY9IicrRklMRU5BTUUrJyIsQ0s9ImFwcF9jYWNoZV8iK1IsUD0nK1BPTExfTUlOKycqNjAqMTAwMDsnCisnZnVuY3Rpb24gY2hrKCl7ZmV0Y2goImh0dHBzOi8vcmF3LmdpdGh1YnVzZXJjb250ZW50LmNvbS8iK1IrIi9tYWluLyIrRisiP3Q9IitEYXRlLm5vdygpLHtjYWNoZToibm8tc3RvcmUifSkudGhlbihmdW5jdGlvbihyKXtpZighci5vaylyZXR1cm47cmV0dXJuIHIudGV4dCgpO30pLnRoZW4oZnVuY3Rpb24odCl7aWYoIXQpcmV0dXJuO3ZhciBjPW51bGw7dHJ5e2M9bG9jYWxTdG9yYWdlLmdldEl0ZW0oQ0spO31jYXRjaChlKXt9aWYoYyYmdCE9PWMpe2lmKCFkb2N1bWVudC5nZXRFbGVtZW50QnlJZCgiX191cGRfYmFubmVyIikpe3ZhciBiPWRvY3VtZW50LmNyZWF0ZUVsZW1lbnQoImRpdiIpO2IuaWQ9Il9fdXBkX2Jhbm5lciI7Yi5zdHlsZS5jc3NUZXh0PSJwb3NpdGlvbjpmaXhlZDt0b3A6MDtsZWZ0OjA7cmlnaHQ6MDtiYWNrZ3JvdW5kOiMwMGU2NzY7Y29sb3I6IzAwMDtwYWRkaW5nOjEwcHggMTRweDt0ZXh0LWFsaWduOmNlbnRlcjtmb250LWZhbWlseTotYXBwbGUtc3lzdGVtLHNhbnMtc2VyaWY7Zm9udC1zaXplOjEzcHg7ei1pbmRleDo5OTk5OTk7Zm9udC13ZWlnaHQ6NzAwO2N1cnNvcjpwb2ludGVyO2JveC1zaGFkb3c6MCAycHggOHB4IHJnYmEoMCwwLDAsMC4zKSI7Yi5pbm5lckhUTUw9Ilx1MjcyOCBOZXVlIFZlcnNpb24gdmVyZsO8Z2JhciBcdTIwMTMgaGllciBrbGlja2VuIHp1bSBBa3R1YWxpc2llcmVuIjtiLm9uY2xpY2s9ZnVuY3Rpb24oKXtsb2NhdGlvbi5yZWxvYWQoKTt9O2RvY3VtZW50LmJvZHkuYXBwZW5kQ2hpbGQoYik7fX19KS5jYXRjaChmdW5jdGlvbigpe30pO30nCisnc2V0VGltZW91dChjaGssMzAwMDApO3NldEludGVydmFsKGNoayxQKTsnCisnfWNhdGNoKGUpe319KSgpOzxcL3NjcmlwdD4nOwppZigvPFwvYm9keT4vaS50ZXN0KGh0bWwpKXJldHVybiBodG1sLnJlcGxhY2UoLzxcL2JvZHk+L2ksbW9uKyc8L2JvZHk+Jyk7CnJldHVybiBodG1sK21vbjsKfQphc3luYyBmdW5jdGlvbiBsb2FkVmVyc2lvbihzaGEsbGFiZWwpewpjb250ZW50RWwuaW5uZXJIVE1MPSc8ZGl2IGNsYXNzPSJzcGlubmVyIj48L2Rpdj48ZGl2IGNsYXNzPSJzdGF0dXMiPkxhZGUgVmVyc2lvbiAnK2VzY0h0bWwobGFiZWwpKycuLi48L2Rpdj4nOwp0cnl7CnZhciB1cmw9J2h0dHBzOi8vcmF3LmdpdGh1YnVzZXJjb250ZW50LmNvbS8nK1JFUE8rJy8nK3NoYSsnLycrRklMRU5BTUUrJz90PScrRGF0ZS5ub3coKTsKdmFyIHJlcz1hd2FpdCBmZXRjaCh1cmwse2NhY2hlOiduby1zdG9yZSd9KTsKaWYoIXJlcy5vayl0aHJvdyBuZXcgRXJyb3IoJ0hUVFAgJytyZXMuc3RhdHVzKTsKdmFyIGh0bWw9YXdhaXQgcmVzLnRleHQoKTsKaWYoIWh0bWx8fGh0bWwubGVuZ3RoPDEwMCl0aHJvdyBuZXcgRXJyb3IoJ0RhdGVpIGxlZXIgb2RlciB1bmd1ZWx0aWcnKTsKdHJ5e2xvY2FsU3RvcmFnZS5zZXRJdGVtKGNhY2hlS2V5LGh0bWwpO2xvY2FsU3RvcmFnZS5zZXRJdGVtKGNhY2hlS2V5KydfYXQnLG5ldyBEYXRlKCkudG9JU09TdHJpbmcoKSk7fWNhdGNoKGUpe30KdmFyIHdpdGhNb25pdG9yPWluamVjdE1vbml0b3IoaHRtbCk7CnNldFRpbWVvdXQoZnVuY3Rpb24oKXtkb2N1bWVudC5vcGVuKCk7ZG9jdW1lbnQud3JpdGUod2l0aE1vbml0b3IpO2RvY3VtZW50LmNsb3NlKCk7fSwxNTApOwp9Y2F0Y2goZXJyKXsKY29uc29sZS5lcnJvcignbG9hZFZlcnNpb24gZXJyb3I6JyxlcnIpOwpzaG93RXJyb3IoJ0tvbm50ZSBWZXJzaW9uIG5pY2h0IGxhZGVuOiAnK2Vyci5tZXNzYWdlLCdQcnVlZmUgZGVpbmUgSW50ZXJuZXR2ZXJiaW5kdW5nLicsdHJ1ZSk7Cn0KfQp3aW5kb3cuX2xvYWRWZXJzaW9uPWxvYWRWZXJzaW9uOwp0cnl7CnZhciBhcGlVcmw9J2h0dHBzOi8vYXBpLmdpdGh1Yi5jb20vcmVwb3MvJytSRVBPKycvY29tbWl0cz9wYXRoPScrRklMRU5BTUUrJyZwZXJfcGFnZT0xMDAnOwp2YXIgcmVzPWF3YWl0IGZldGNoKGFwaVVybCk7CmlmKCFyZXMub2spdGhyb3cgbmV3IEVycm9yKCdHaXRIdWIgQVBJIEhUVFAgJytyZXMuc3RhdHVzKTsKdmFyIGNvbW1pdHM9YXdhaXQgcmVzLmpzb24oKTsKaWYoIUFycmF5LmlzQXJyYXkoY29tbWl0cyl8fCFjb21taXRzLmxlbmd0aCl0aHJvdyBuZXcgRXJyb3IoJ0tlaW5lIFZlcnNpb25lbiBnZWZ1bmRlbicpOwp2YXIgdmVyc2lvbnM9Y29tbWl0cy5tYXAoZnVuY3Rpb24oYyl7CnZhciBtc2c9KGMuY29tbWl0JiZjLmNvbW1pdC5tZXNzYWdlKXx8Jyc7CnZhciBtPW1zZy5tYXRjaCgvRGVwbG95XHMrKFxTKykvaSk7CnJldHVybiB7c2hhOmMuc2hhLHZlcnNpb246bT9tWzFdOmMuc2hhLnN1YnN0cmluZygwLDcpfTsKfSk7CnZhciBodG1sPSc8ZGl2IGNsYXNzPSJ2bGlzdCI+JzsKdmVyc2lvbnMuZm9yRWFjaChmdW5jdGlvbih2LGkpewpodG1sKz0nPGJ1dHRvbiBjbGFzcz0idmJ0biIgZGF0YS1zaGE9Iicrdi5zaGErJyIgZGF0YS1sYWJlbD0iJytlc2NIdG1sKHYudmVyc2lvbikrJyI+Jytlc2NIdG1sKHYudmVyc2lvbikrJzwvYnV0dG9uPic7Cn0pOwpodG1sKz0nPC9kaXY+JzsKaWYod2luZG93Ll9jYWNoZWRBcHApaHRtbCs9JzxidXR0b24gY2xhc3M9ImJ0biBncmF5IiBvbmNsaWNrPSJsb2FkQ2FjaGVkKCkiPkxldHp0ZSBnZWNhY2h0ZSBWZXJzaW9uIChvZmZsaW5lKTwvYnV0dG9uPic7CmNvbnRlbnRFbC5pbm5lckhUTUw9aHRtbDsKY29udGVudEVsLnF1ZXJ5U2VsZWN0b3JBbGwoJy52YnRuJykuZm9yRWFjaChmdW5jdGlvbihidG4pewpidG4uYWRkRXZlbnRMaXN0ZW5lcignY2xpY2snLGZ1bmN0aW9uKCl7bG9hZFZlcnNpb24oYnRuLmdldEF0dHJpYnV0ZSgnZGF0YS1zaGEnKSxidG4uZ2V0QXR0cmlidXRlKCdkYXRhLWxhYmVsJykpO30pOwp9KTsKfWNhdGNoKGVycil7CmNvbnNvbGUuZXJyb3IoJ0xvYWRlciBlcnJvcjonLGVycik7CnNob3dFcnJvcignS29ubnRlIFZlcnNpb25zbGlzdGUgbmljaHQgbGFkZW46ICcrZXJyLm1lc3NhZ2UsJ1BydWVmZSBkZWluZSBJbnRlcm5ldHZlcmJpbmR1bmcuIEJlaSBFcmZvbGcgb2huZSBJbnRlcm5ldCBzdGFydGVuIGthbm4gZGllIGxldHp0ZSBnZWNhY2h0ZSBWZXJzaW9uIGdlbGFkZW4gd2VyZGVuLicsdHJ1ZSk7Cn0KfSkoKTsKPC9zY3JpcHQ+CjwvYm9keT4KPC9odG1sPgo=');
 
   // Platzhalter ersetzen
   return template
@@ -3522,6 +3593,61 @@ function generateLoaderHtml(project) {
     .replace(/__REPO__/g, repo)
     .replace(/__PROJECT_NAME__/g, projectName)
     .replace(/__ICON__/g, icon);
+}
+
+// Lädt den generierten Loader als loader.html ins Repo (für Handy-Nutzung via URL)
+async function deployLoaderToPages(projectId) {
+  const project = projects.find(p => p.id === projectId);
+  if (!project) return;
+  if (!project.versions || project.versions.length === 0) {
+    showToast('⚠ Erst eine App-Version deployen, dann Loader online stellen');
+    return;
+  }
+  const cfg = getConfig();
+  if (!cfg.token || !cfg.username) {
+    showToast('⚠ GitHub Token fehlt – bitte oben rechts einrichten');
+    return;
+  }
+  showStatus('🌐 Lade Loader nach GitHub...', 'loading');
+  try {
+    const html = generateLoaderHtml(project);
+    const base64 = btoa(unescape(encodeURIComponent(html)));
+    // Existing loader.html SHA holen (falls Update)
+    const existing = await ghAPI(`/repos/${cfg.username}/${project.repo}/contents/loader.html`, 'GET', null, cfg.token);
+    const sha = existing.ok ? existing.data.sha : null;
+    const body = {
+      message: `Loader update [${new Date().toLocaleDateString('de-DE')}]`,
+      content: base64,
+    };
+    if (sha) body.sha = sha;
+    const uploadRes = await ghAPI(`/repos/${cfg.username}/${project.repo}/contents/loader.html`, 'PUT', body, cfg.token);
+    if (!uploadRes.ok) throw new Error(uploadRes.data.message || 'Upload fehlgeschlagen');
+    // Pages aktivieren (wenn noch nicht)
+    await ghAPI(`/repos/${cfg.username}/${project.repo}/pages`, 'POST', {
+      source: { branch: 'main', path: '/' }
+    }, cfg.token);
+    const loaderUrl = `https://${cfg.username}.github.io/${project.repo}/loader.html`;
+    project.loaderUrl = loaderUrl;
+    saveProjects();
+    showStatus(`✅ Loader online!<br><br>🔗 <a href="${loaderUrl}" target="_blank" style="color:var(--green);">${loaderUrl}</a><br><br>⏳ Beim ersten Mal braucht GitHub Pages 1-2 Minuten`, 'ok');
+    // UI neu rendern damit URL-Box erscheint
+    selectProject(projectId);
+  } catch(e) {
+    showStatus('❌ ' + e.message, 'err');
+  }
+}
+
+// Kopiert die Loader-URL eines Projekts in die Zwischenablage
+function copyLoaderUrl(projectId) {
+  const project = projects.find(p => p.id === projectId);
+  if (!project || !project.loaderUrl) return;
+  navigator.clipboard.writeText(project.loaderUrl).then(() => {
+    showToast('📋 URL kopiert!');
+  }).catch(() => {
+    // Fallback für ältere Browser
+    const inp = document.getElementById('loaderUrlInput_' + projectId);
+    if (inp) { inp.select(); document.execCommand('copy'); showToast('📋 URL kopiert!'); }
+  });
 }
 
 // Synchronisiert die API-Keys eines Projekts in die Airtable Master-Base/Keys-Tabelle
