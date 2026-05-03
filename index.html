@@ -8,7 +8,7 @@
 <meta name="apple-mobile-web-app-title" content="GitDeploy">
 <meta name="theme-color" content="#0d0d0d">
 <meta name="format-detection" content="telephone=no">
-<title>GitDeploy v3.2.3 · Wizard</title>
+<title>GitDeploy v3.3 · Wizard</title>
 <link href="https://fonts.googleapis.com/css2?family=DM+Mono:wght@400;500&family=Bricolage+Grotesque:wght@400;600;700;800&display=swap" rel="stylesheet">
 <style>
 :root {
@@ -884,7 +884,7 @@ body::after {
   <div class="logo">
     <button onclick="toggleMobileSidebar()" class="mobile-menu-btn" style="display:none;background:var(--surface2);border:1px solid var(--border2);color:var(--text);border-radius:8px;padding:6px 10px;font-size:16px;cursor:pointer;margin-right:8px;">☰</button>
     <div class="logo-mark">🚀</div>
-    <div class="logo-name">Git<span>Deploy</span> <span style="font-size:9px;color:var(--text3);font-family:var(--mono);">v3.2.3</span></div>
+    <div class="logo-name">Git<span>Deploy</span> <span style="font-size:9px;color:var(--text3);font-family:var(--mono);">v3.3</span></div>
   </div>
   <div class="token-status">
     <div class="token-dot" id="airtableStatusDot" style="background:var(--text3);" title="Airtable Verbindung"></div>
@@ -2212,7 +2212,7 @@ function downloadDocsPdf() {
   <p style="color:#666;font-size:13px;margin-bottom:30px;">Vollständige Anleitung zur Nutzung des GitDeploy-Tools<br>
   <span style="font-size:11px;color:#888;">Erstellt am: ${new Date().toLocaleDateString('de-DE')}</span></p>
   ${docsHtml}
-  <div class="footer">GitDeploy v3.2.3 – Aufzugshandwerk GmbH</div>
+  <div class="footer">GitDeploy v3.3 – Aufzugshandwerk GmbH</div>
   <script>setTimeout(() => window.print(), 500);<\/script>
 </body>
 </html>`);
@@ -2587,6 +2587,23 @@ function renderMain() {
             <input type="text" readonly value="${escHtml(loaderUrl)}" id="loaderUrlInput_${project.id}" style="flex:1;padding:8px 12px;background:#0d0d0d;border:1px solid #2a2a2a;border-radius:6px;color:var(--green);font-family:var(--mono);font-size:12px;">
             <button class="snippet-btn" onclick="copyLoaderUrl('${project.id}')" title="In Zwischenablage kopieren">📋</button>
             <a href="${escHtml(loaderUrl)}" target="_blank" class="snippet-btn green" style="text-decoration:none;display:inline-flex;align-items:center;">↗ Öffnen</a>
+          </div>
+        </div>` : ''}
+        <hr style="border:none;border-top:1px solid rgba(255,255,255,0.08);margin:14px 0;">
+        <div class="snippet-header" style="margin-top:6px;">
+          <div class="snippet-title" style="color:#f7971e;">// 🛠 Admin-Loader (mit Versions-Auswahl)</div>
+          <div style="display:flex;gap:6px;">
+            <button class="snippet-btn" style="background:rgba(247,151,30,0.15);color:#f7971e;border:1px solid rgba(247,151,30,0.4);" onclick="downloadLoaderAdmin('${project.id}')">📥 Datei</button>
+            <button class="snippet-btn" style="background:rgba(247,151,30,0.15);color:#f7971e;border:1px solid rgba(247,151,30,0.4);" onclick="deployLoaderAdminToPages('${project.id}')">🌐 Online</button>
+          </div>
+        </div>
+        <div class="snippet-info" style="font-size:11px;">
+          Für dich zum Testen / Rollback. Zeigt eine Liste ALLER Versionen aus dem GitHub-Commit-Log. Nicht für End-User gedacht.
+        </div>
+        ${project.loaderAdminUrl ? `<div class="snippet-actions" style="flex-direction:column;align-items:stretch;gap:6px;">
+          <div style="display:flex;gap:6px;align-items:center;">
+            <input type="text" readonly value="${escHtml(project.loaderAdminUrl)}" id="loaderAdminUrlInput_${project.id}" style="flex:1;padding:8px 12px;background:#0d0d0d;border:1px solid #2a2a2a;border-radius:6px;color:#f7971e;font-family:var(--mono);font-size:12px;">
+            <a href="${escHtml(project.loaderAdminUrl)}" target="_blank" class="snippet-btn" style="text-decoration:none;display:inline-flex;align-items:center;background:rgba(247,151,30,0.15);color:#f7971e;border:1px solid rgba(247,151,30,0.4);">↗ Öffnen</a>
           </div>
         </div>` : ''}
       </div>`;
@@ -3869,6 +3886,23 @@ function copyInstructions(projectId) {
 // ── LOADER GENERATOR ──────────────────────────────────────────────────────
 // Generiert eine kleine Loader-HTML die immer die neueste Version aus GitHub lädt
 function generateLoaderHtml(project) {
+  // Auto-Loader: lädt direkt die neueste Version ohne Versionsauswahl
+  const cfg = getConfig();
+  const username = cfg.username || 'USERNAME';
+  const repo = project.repo || 'REPO';
+  const projectName = project.name || 'App';
+  const icon = project.icon || '🚀';
+
+  const template = atob('PCFET0NUWVBFIGh0bWw+CjxodG1sIGxhbmc9ImRlIj4KPGhlYWQ+CjxtZXRhIGNoYXJzZXQ9IlVURi04Ij4KPG1ldGEgbmFtZT0idmlld3BvcnQiIGNvbnRlbnQ9IndpZHRoPWRldmljZS13aWR0aCwgaW5pdGlhbC1zY2FsZT0xLjAsdmlld3BvcnQtZml0PWNvdmVyIj4KPG1ldGEgbmFtZT0iYXBwbGUtbW9iaWxlLXdlYi1hcHAtY2FwYWJsZSIgY29udGVudD0ieWVzIj4KPG1ldGEgbmFtZT0iYXBwbGUtbW9iaWxlLXdlYi1hcHAtc3RhdHVzLWJhci1zdHlsZSIgY29udGVudD0iZGVmYXVsdCI+CjxtZXRhIG5hbWU9ImFwcGxlLW1vYmlsZS13ZWItYXBwLXRpdGxlIiBjb250ZW50PSJfX1BST0pFQ1RfTkFNRV9fIj4KPHRpdGxlPl9fUFJPSkVDVF9OQU1FX188L3RpdGxlPgo8c3R5bGU+Cip7bWFyZ2luOjA7cGFkZGluZzowO2JveC1zaXppbmc6Ym9yZGVyLWJveDt9Cmh0bWwsYm9keXtoZWlnaHQ6MTAwJTtmb250LWZhbWlseTotYXBwbGUtc3lzdGVtLHN5c3RlbS11aSxTZWdvZSBVSSxSb2JvdG8sc2Fucy1zZXJpZjt9CmJvZHl7ZGlzcGxheTpmbGV4O2FsaWduLWl0ZW1zOmNlbnRlcjtqdXN0aWZ5LWNvbnRlbnQ6Y2VudGVyO2JhY2tncm91bmQ6IzBkMGQwZDtjb2xvcjojZmZmO30KLmxvYWRlcnt0ZXh0LWFsaWduOmNlbnRlcjtwYWRkaW5nOjMwcHg7bWF4LXdpZHRoOjQyMHB4O3dpZHRoOjEwMCU7fQouaWNvbntmb250LXNpemU6NjRweDttYXJnaW4tYm90dG9tOjE4cHg7fQoudGl0bGV7Zm9udC1zaXplOjIycHg7Zm9udC13ZWlnaHQ6NzAwO21hcmdpbi1ib3R0b206NnB4O30KLnN1Yntmb250LXNpemU6MTNweDtjb2xvcjojODg4O21hcmdpbi1ib3R0b206MjRweDt9Ci5zcGlubmVye3dpZHRoOjM2cHg7aGVpZ2h0OjM2cHg7Ym9yZGVyOjNweCBzb2xpZCAjMzMzO2JvcmRlci10b3AtY29sb3I6IzAwZTY3Njtib3JkZXItcmFkaXVzOjUwJTthbmltYXRpb246c3BpbiAwLjhzIGxpbmVhciBpbmZpbml0ZTttYXJnaW46MCBhdXRvIDE2cHg7fQpAa2V5ZnJhbWVzIHNwaW57dG97dHJhbnNmb3JtOnJvdGF0ZSgzNjBkZWcpO319Ci5zdGF0dXN7Zm9udC1mYW1pbHk6bW9ub3NwYWNlO2ZvbnQtc2l6ZToxMXB4O2NvbG9yOiM2NjY7fQouZXJye2NvbG9yOiNmZjUyNTI7YmFja2dyb3VuZDojMmExMDEwO3BhZGRpbmc6MTJweCAxNnB4O2JvcmRlci1yYWRpdXM6OHB4O2JvcmRlcjoxcHggc29saWQgIzVhMjAyMDttYXJnaW4tdG9wOjEycHg7Zm9udC1zaXplOjEycHg7dGV4dC1hbGlnbjpsZWZ0O2xpbmUtaGVpZ2h0OjEuNTt9Ci5idG57ZGlzcGxheTppbmxpbmUtYmxvY2s7bWFyZ2luOjhweCA0cHggMDtwYWRkaW5nOjEwcHggMjBweDtiYWNrZ3JvdW5kOiMwMGU2NzY7Y29sb3I6IzBkMGQwZDtib3JkZXI6bm9uZTtib3JkZXItcmFkaXVzOjhweDtmb250LXdlaWdodDo3MDA7Y3Vyc29yOnBvaW50ZXI7dGV4dC1kZWNvcmF0aW9uOm5vbmU7Zm9udC1zaXplOjEzcHg7Zm9udC1mYW1pbHk6aW5oZXJpdDt9Ci5idG4uZ3JheXtiYWNrZ3JvdW5kOiM4ODg7Y29sb3I6I2ZmZjt9Cjwvc3R5bGU+CjwvaGVhZD4KPGJvZHk+CjxkaXYgY2xhc3M9ImxvYWRlciIgaWQ9ImxvYWRlciI+CjxkaXYgY2xhc3M9Imljb24iPl9fSUNPTl9fPC9kaXY+CjxkaXYgY2xhc3M9InRpdGxlIj5fX1BST0pFQ1RfTkFNRV9fPC9kaXY+CjxkaXYgY2xhc3M9InN1YiI+TGFkZSBuZXVlc3RlIFZlcnNpb24uLi48L2Rpdj4KPGRpdiBjbGFzcz0ic3Bpbm5lciI+PC9kaXY+CjxkaXYgY2xhc3M9InN0YXR1cyIgaWQ9InN0YXR1cyI+VmVyYmluZGUuLi48L2Rpdj4KPC9kaXY+CjxzY3JpcHQ+Cihhc3luYyBmdW5jdGlvbigpewp2YXIgUkVQTz0nX19VU0VSTkFNRV9fL19fUkVQT19fJzsKdmFyIEZJTEVOQU1FPSdpbmRleC5odG1sJzsKdmFyIFBPTExfTUlOPTU7CnZhciBsb2FkZXJFbD1kb2N1bWVudC5nZXRFbGVtZW50QnlJZCgnbG9hZGVyJyk7CnZhciBzdGF0dXNFbD1kb2N1bWVudC5nZXRFbGVtZW50QnlJZCgnc3RhdHVzJyk7CmZ1bmN0aW9uIHNldFN0YXR1cyhtc2cpe2lmKHN0YXR1c0VsJiZzdGF0dXNFbC5wYXJlbnROb2RlKXN0YXR1c0VsLnRleHRDb250ZW50PW1zZzt9CmZ1bmN0aW9uIGVzY0h0bWwocyl7cmV0dXJuIFN0cmluZyhzKS5yZXBsYWNlKC9bJjw+IiddL2csZnVuY3Rpb24oYyl7cmV0dXJuIHsnJic6JyZhbXA7JywnPCc6JyZsdDsnLCc+JzonJmd0OycsJyInOicmcXVvdDsnLCInIjonJiMzOTsnfVtjXTt9KTt9CmZ1bmN0aW9uIHNob3dFcnJvcihtc2csaGludCxhbGxvd0NhY2hlZCl7CnZhciBodG1sPSc8ZGl2IGNsYXNzPSJlcnIiPicrZXNjSHRtbChtc2cpKyhoaW50Pyc8YnI+PGJyPjxzdHJvbmc+VGlwcDo8L3N0cm9uZz4gJytlc2NIdG1sKGhpbnQpOicnKSsnPC9kaXY+JzsKaHRtbCs9JzxidXR0b24gY2xhc3M9ImJ0biIgb25jbGljaz0ibG9jYXRpb24ucmVsb2FkKCkiPkVybmV1dCB2ZXJzdWNoZW48L2J1dHRvbj4nOwppZihhbGxvd0NhY2hlZCYmd2luZG93Ll9jYWNoZWRBcHApaHRtbCs9JzxidXR0b24gY2xhc3M9ImJ0biBncmF5IiBvbmNsaWNrPSJsb2FkQ2FjaGVkKCkiPkdlY2FjaHRlIFZlcnNpb24gc3RhcnRlbjwvYnV0dG9uPic7CmxvYWRlckVsLmlubmVySFRNTD1odG1sOwp9CndpbmRvdy5sb2FkQ2FjaGVkPWZ1bmN0aW9uKCl7aWYod2luZG93Ll9jYWNoZWRBcHApe2RvY3VtZW50Lm9wZW4oKTtkb2N1bWVudC53cml0ZSh3aW5kb3cuX2NhY2hlZEFwcCk7ZG9jdW1lbnQuY2xvc2UoKTt9fTsKdmFyIGNhY2hlS2V5PSdhcHBfY2FjaGVfJytSRVBPOwp2YXIgY2FjaGVkSHRtbD1udWxsLGNhY2hlZEF0PW51bGw7CnRyeXtjYWNoZWRIdG1sPWxvY2FsU3RvcmFnZS5nZXRJdGVtKGNhY2hlS2V5KTtjYWNoZWRBdD1sb2NhbFN0b3JhZ2UuZ2V0SXRlbShjYWNoZUtleSsnX2F0Jyk7fWNhdGNoKGUpe30KaWYoY2FjaGVkSHRtbCl3aW5kb3cuX2NhY2hlZEFwcD1jYWNoZWRIdG1sOwpmdW5jdGlvbiBpbmplY3RNb25pdG9yKGh0bWwpewp2YXIgbW9uPSc8c2NyaXB0PihmdW5jdGlvbigpe3RyeXt2YXIgUj0iJytSRVBPKyciLEY9IicrRklMRU5BTUUrJyIsQ0s9ImFwcF9jYWNoZV8iK1IsUD0nK1BPTExfTUlOKycqNjAqMTAwMDsnCisnZnVuY3Rpb24gc2hvd1VwZGF0ZUJhbm5lcigpe2lmKGRvY3VtZW50LmdldEVsZW1lbnRCeUlkKCJfX3VwZF9iYW5uZXIiKSlyZXR1cm47dmFyIGI9ZG9jdW1lbnQuY3JlYXRlRWxlbWVudCgiZGl2Iik7Yi5pZD0iX191cGRfYmFubmVyIjtiLnN0eWxlLmNzc1RleHQ9InBvc2l0aW9uOmZpeGVkO3RvcDowO2xlZnQ6MDtyaWdodDowO2JhY2tncm91bmQ6IzAwZTY3Njtjb2xvcjojMDAwO3BhZGRpbmc6MTBweCAxNHB4O3RleHQtYWxpZ246Y2VudGVyO2ZvbnQtZmFtaWx5Oi1hcHBsZS1zeXN0ZW0sc2Fucy1zZXJpZjtmb250LXNpemU6MTNweDt6LWluZGV4Ojk5OTk5OTtmb250LXdlaWdodDo3MDA7Y3Vyc29yOnBvaW50ZXI7Ym94LXNoYWRvdzowIDJweCA4cHggcmdiYSgwLDAsMCwwLjMpO3BhZGRpbmctdG9wOmNhbGMoMTBweCArIGVudihzYWZlLWFyZWEtaW5zZXQtdG9wLCAwcHgpKSI7Yi5pbm5lckhUTUw9IuKcqCBOZXVlIFZlcnNpb24gdmVyZsO8Z2JhciDigJMgaGllciBrbGlja2VuIHp1bSBBa3R1YWxpc2llcmVuIjtiLm9uY2xpY2s9ZnVuY3Rpb24oKXtsb2NhdGlvbi5yZWxvYWQoKTt9O2RvY3VtZW50LmJvZHkuYXBwZW5kQ2hpbGQoYik7fScKKydmdW5jdGlvbiBjaGsoKXtmZXRjaCgiaHR0cHM6Ly9yYXcuZ2l0aHVidXNlcmNvbnRlbnQuY29tLyIrUisiL21haW4vIitGKyI/dD0iK0RhdGUubm93KCkse2NhY2hlOiJuby1zdG9yZSJ9KS50aGVuKGZ1bmN0aW9uKHIpe2lmKCFyLm9rKXJldHVybjtyZXR1cm4gci50ZXh0KCk7fSkudGhlbihmdW5jdGlvbih0KXtpZighdClyZXR1cm47dmFyIGM9bnVsbDt0cnl7Yz1sb2NhbFN0b3JhZ2UuZ2V0SXRlbShDSyk7fWNhdGNoKGUpe31pZihjJiZ0IT09Yyl7c2hvd1VwZGF0ZUJhbm5lcigpO319KS5jYXRjaChmdW5jdGlvbigpe30pO30nCisnc2V0VGltZW91dChjaGssMzAwMDApO3NldEludGVydmFsKGNoayxQKTsnCisnZG9jdW1lbnQuYWRkRXZlbnRMaXN0ZW5lcigidmlzaWJpbGl0eWNoYW5nZSIsZnVuY3Rpb24oKXtpZighZG9jdW1lbnQuaGlkZGVuKWNoaygpO30pOycKKyd3aW5kb3cuYWRkRXZlbnRMaXN0ZW5lcigiZm9jdXMiLGNoayk7JworJ31jYXRjaChlKXt9fSkoKTs8XC9zY3JpcHQ+JzsKdmFyIGlkeD1odG1sLnRvTG93ZXJDYXNlKCkubGFzdEluZGV4T2YoJzwvYm9keT4nKTsKaWYoaWR4Pj0wKXJldHVybiBodG1sLnNsaWNlKDAsaWR4KSttb24raHRtbC5zbGljZShpZHgpOwpyZXR1cm4gaHRtbCttb247Cn0KdHJ5ewpzZXRTdGF0dXMoJ0xhZGUgbmV1ZXN0ZSBWZXJzaW9uJyk7CnZhciB1cmw9J2h0dHBzOi8vcmF3LmdpdGh1YnVzZXJjb250ZW50LmNvbS8nK1JFUE8rJy9tYWluLycrRklMRU5BTUUrJz90PScrRGF0ZS5ub3coKTsKdmFyIHJlcz1hd2FpdCBmZXRjaCh1cmwse2NhY2hlOiduby1zdG9yZSd9KTsKaWYoIXJlcy5vayl0aHJvdyBuZXcgRXJyb3IoJ0hUVFAgJytyZXMuc3RhdHVzKTsKdmFyIGh0bWw9YXdhaXQgcmVzLnRleHQoKTsKaWYoIWh0bWx8fGh0bWwubGVuZ3RoPDEwMCl0aHJvdyBuZXcgRXJyb3IoJ0RhdGVpIGxlZXIgb2RlciB1bmfDvGx0aWcnKTsKdHJ5e2xvY2FsU3RvcmFnZS5zZXRJdGVtKGNhY2hlS2V5LGh0bWwpO2xvY2FsU3RvcmFnZS5zZXRJdGVtKGNhY2hlS2V5KydfYXQnLG5ldyBEYXRlKCkudG9JU09TdHJpbmcoKSk7fWNhdGNoKGUpe30KdmFyIHdpdGhNb25pdG9yPWluamVjdE1vbml0b3IoaHRtbCk7CnNldFN0YXR1cygnU3RhcnRlIEFwcCcpOwpzZXRUaW1lb3V0KGZ1bmN0aW9uKCl7ZG9jdW1lbnQub3BlbigpO2RvY3VtZW50LndyaXRlKHdpdGhNb25pdG9yKTtkb2N1bWVudC5jbG9zZSgpO30sMTUwKTsKfWNhdGNoKGVycil7CmNvbnNvbGUuZXJyb3IoJ0xvYWRlciBlcnJvcjonLGVycik7CmlmKGNhY2hlZEh0bWwpewpzZXRTdGF0dXMoJ09mZmxpbmUtTW9kdXMnKTsKdmFyIGQ9Y2FjaGVkQXQ/bmV3IERhdGUoY2FjaGVkQXQpLnRvTG9jYWxlU3RyaW5nKCdkZS1ERScpOid1bmJla2FubnQnOwp2YXIgYj0nPGRpdiBzdHlsZT0icG9zaXRpb246Zml4ZWQ7dG9wOjA7bGVmdDowO3JpZ2h0OjA7YmFja2dyb3VuZDojZmY5ODAwO2NvbG9yOiMwMDA7cGFkZGluZzo4cHg7dGV4dC1hbGlnbjpjZW50ZXI7Zm9udC1mYW1pbHk6c2Fucy1zZXJpZjtmb250LXNpemU6MTJweDt6LWluZGV4Ojk5OTk5O3BhZGRpbmctdG9wOmNhbGMoOHB4ICsgZW52KHNhZmUtYXJlYS1pbnNldC10b3AsIDBweCkpIj5PZmZsaW5lLU1vZHVzIMK3IExldHp0ZSBWZXJzaW9uIHZvbSAnK2VzY0h0bWwoZCkrJyDCtyA8YSBocmVmPSJqYXZhc2NyaXB0OmxvY2F0aW9uLnJlbG9hZCgpIiBzdHlsZT0iY29sb3I6IzAwMDtmb250LXdlaWdodDo3MDA7Ij5Fcm5ldXQgdmVyYmluZGVuPC9hPjwvZGl2Pic7CnZhciB3aXRoQmFubmVyPWNhY2hlZEh0bWwucmVwbGFjZSgvPGJvZHkoW14+XSopPi9pLCc8Ym9keSQxPicrYik7CnNldFRpbWVvdXQoZnVuY3Rpb24oKXtkb2N1bWVudC5vcGVuKCk7ZG9jdW1lbnQud3JpdGUoaW5qZWN0TW9uaXRvcih3aXRoQmFubmVyKSk7ZG9jdW1lbnQuY2xvc2UoKTt9LDIwMCk7Cn1lbHNlewpzaG93RXJyb3IoJ0tvbm50ZSBBcHAgbmljaHQgbGFkZW46ICcrZXJyLm1lc3NhZ2UsJ1Byw7xmZSBkZWluZSBJbnRlcm5ldHZlcmJpbmR1bmcuJyx0cnVlKTsKfQp9Cn0pKCk7Cjwvc2NyaXB0Pgo8L2JvZHk+CjwvaHRtbD4K');
+
+  return template
+    .replace(/__USERNAME__/g, username)
+    .replace(/__REPO__/g, repo)
+    .replace(/__PROJECT_NAME__/g, projectName)
+    .replace(/__ICON__/g, icon);
+}
+
+function generateLoaderHtmlAdmin(project) {
   const cfg = getConfig();
   const username = cfg.username || 'USERNAME';
   const repo = project.repo || 'REPO';
@@ -3926,6 +3960,67 @@ async function deployLoaderToPages(projectId) {
   } catch(e) {
     showStatus('❌ ' + e.message, 'err');
   }
+}
+
+// Lädt den ADMIN-Loader (mit Versionspicker) als loader-admin.html ins Repo
+async function deployLoaderAdminToPages(projectId) {
+  const project = projects.find(p => p.id === projectId);
+  if (!project) return;
+  if (!project.versions || project.versions.length === 0) {
+    showToast('⚠ Erst eine App-Version deployen, dann Loader online stellen');
+    return;
+  }
+  const cfg = getConfig();
+  if (!cfg.token || !cfg.username) {
+    showToast('⚠ GitHub Token fehlt – bitte oben rechts einrichten');
+    return;
+  }
+  showStatus('🛠 Lade Admin-Loader nach GitHub...', 'loading');
+  try {
+    const html = generateLoaderHtmlAdmin(project);
+    const base64 = btoa(unescape(encodeURIComponent(html)));
+    const existing = await ghAPI(`/repos/${cfg.username}/${project.repo}/contents/loader-admin.html`, 'GET', null, cfg.token);
+    const sha = existing.ok ? existing.data.sha : null;
+    const body = {
+      message: `Admin-Loader update [${new Date().toLocaleDateString('de-DE')}]`,
+      content: base64,
+    };
+    if (sha) body.sha = sha;
+    const uploadRes = await ghAPI(`/repos/${cfg.username}/${project.repo}/contents/loader-admin.html`, 'PUT', body, cfg.token);
+    if (!uploadRes.ok) throw new Error(uploadRes.data.message || 'Upload fehlgeschlagen');
+    await ghAPI(`/repos/${cfg.username}/${project.repo}/pages`, 'POST', {
+      source: { branch: 'main', path: '/' }
+    }, cfg.token);
+    const adminUrl = `https://${cfg.username}.github.io/${project.repo}/loader-admin.html`;
+    project.loaderAdminUrl = adminUrl;
+    saveProjects();
+    showStatus(`✅ Admin-Loader online!<br><br>🔗 <a href="${adminUrl}" target="_blank" style="color:var(--green);">${adminUrl}</a><br><br>⏳ Beim ersten Mal braucht GitHub Pages 1-2 Minuten`, 'ok');
+    selectProject(projectId);
+  } catch(e) {
+    showStatus('❌ ' + e.message, 'err');
+  }
+}
+
+// Lädt den Admin-Loader als Datei runter
+function downloadLoaderAdmin(projectId) {
+  const project = projects.find(p => p.id === projectId);
+  if (!project) return;
+  if (!project.versions || project.versions.length === 0) {
+    showToast('⚠ Erst eine Version deployen');
+    return;
+  }
+  const html = generateLoaderHtmlAdmin(project);
+  const blob = new Blob([html], { type: 'text/html' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  const safeName = (project.name || 'app').replace(/[^a-zA-Z0-9 äöüÄÖÜß-]/g, '').trim();
+  a.download = safeName + '-admin.html';
+  document.body.appendChild(a);
+  a.click();
+  document.body.removeChild(a);
+  URL.revokeObjectURL(url);
+  showToast('🛠 Admin-Loader heruntergeladen');
 }
 
 // Kopiert die Loader-URL eines Projekts in die Zwischenablage
