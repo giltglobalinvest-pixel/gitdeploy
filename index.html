@@ -8,7 +8,7 @@
 <meta name="apple-mobile-web-app-title" content="GitDeploy">
 <meta name="theme-color" content="#0d0d0d">
 <meta name="format-detection" content="telephone=no">
-<title>GitDeploy v3.3.1 · Wizard</title>
+<title>GitDeploy v3.3.1.1 · Wizard</title>
 <link href="https://fonts.googleapis.com/css2?family=DM+Mono:wght@400;500&family=Bricolage+Grotesque:wght@400;600;700;800&display=swap" rel="stylesheet">
 <style>
 :root {
@@ -884,7 +884,7 @@ body::after {
   <div class="logo">
     <button onclick="toggleMobileSidebar()" class="mobile-menu-btn" style="display:none;background:var(--surface2);border:1px solid var(--border2);color:var(--text);border-radius:8px;padding:6px 10px;font-size:16px;cursor:pointer;margin-right:8px;">☰</button>
     <div class="logo-mark">🚀</div>
-    <div class="logo-name">Git<span>Deploy</span> <span style="font-size:9px;color:var(--text3);font-family:var(--mono);">v3.3</span></div>
+    <div class="logo-name">Git<span>Deploy</span> <span style="font-size:9px;color:var(--text3);font-family:var(--mono);">v3.3.1</span></div>
   </div>
   <div class="token-status">
     <div class="token-dot" id="airtableStatusDot" style="background:var(--text3);" title="Airtable Verbindung"></div>
@@ -2240,7 +2240,7 @@ function downloadDocsPdf() {
   <p style="color:#666;font-size:13px;margin-bottom:30px;">Vollständige Anleitung zur Nutzung des GitDeploy-Tools<br>
   <span style="font-size:11px;color:#888;">Erstellt am: ${new Date().toLocaleDateString('de-DE')}</span></p>
   ${docsHtml}
-  <div class="footer">GitDeploy v3.3.1 – Aufzugshandwerk GmbH</div>
+  <div class="footer">GitDeploy v3.3.1.1 – Aufzugshandwerk GmbH</div>
   <script>setTimeout(() => window.print(), 500);<\/script>
 </body>
 </html>`);
@@ -2665,12 +2665,34 @@ async function downloadVersion(url, filename) {
   }
 }
 
+// Pagination-State pro Projekt (welche Seite ist offen)
+const versionPageState = {};
+const VERSIONS_PER_PAGE = 5;
+
+function setVersionPage(projectId, page) {
+  versionPageState[projectId] = Math.max(0, page);
+  const project = projects.find(p => p.id === projectId);
+  if (!project) return;
+  const versBox = document.querySelector('.versions-box');
+  if (versBox) {
+    versBox.innerHTML = `<div class="versions-header">// Versionsarchiv (${project.versions.length})</div>${renderVersionHistory(project)}`;
+  }
+}
+
 function renderVersionHistory(project) {
   if (!project.versions?.length) {
     return '<div class="empty-versions">Noch keine Versionen deployed</div>';
   }
   const cfg = getConfig();
-  return project.versions.slice().reverse().map((v, i) => {
+  const allVersionsDesc = project.versions.slice().reverse();
+  const totalPages = Math.ceil(allVersionsDesc.length / VERSIONS_PER_PAGE);
+  const currentPage = versionPageState[project.id] || 0;
+  const startIdx = currentPage * VERSIONS_PER_PAGE;
+  const pageVersions = allVersionsDesc.slice(startIdx, startIdx + VERSIONS_PER_PAGE);
+  const globalIndexOffset = startIdx;
+
+  const itemsHtml = pageVersions.map((v, localI) => {
+    const i = globalIndexOffset + localI;
     const pagesUrl = v.pagesUrl || (cfg.username ? `https://${cfg.username}.github.io/${project.repo}` : '');
     const ghCommitsUrl = cfg.username ? `https://github.com/${cfg.username}/${project.repo}/commits/main` : '';
     // Originaler Dateiname (zur Anzeige für den User)
@@ -2708,6 +2730,24 @@ function renderVersionHistory(project) {
       </div>
     </div>`;
   }).join('');
+
+  // Pagination-Controls (nur wenn mehr als 1 Seite)
+  let paginationHtml = '';
+  if (totalPages > 1) {
+    const fromVer = startIdx + 1;
+    const toVer = Math.min(startIdx + VERSIONS_PER_PAGE, allVersionsDesc.length);
+    paginationHtml = `<div style="display:flex;align-items:center;justify-content:space-between;padding:10px 12px;border-top:1px solid var(--border);font-family:var(--mono);font-size:11px;color:var(--text3);">
+      <button onclick="setVersionPage('${project.id}', ${currentPage - 1})"
+        ${currentPage === 0 ? 'disabled' : ''}
+        style="background:${currentPage === 0 ? 'transparent' : 'var(--surface3)'};border:1px solid var(--border2);color:${currentPage === 0 ? 'var(--text3)' : 'var(--text)'};border-radius:6px;padding:4px 10px;font-size:11px;font-family:var(--mono);cursor:${currentPage === 0 ? 'not-allowed' : 'pointer'};opacity:${currentPage === 0 ? '0.4' : '1'};">← Neuer</button>
+      <span>Versionen ${fromVer}–${toVer} von ${allVersionsDesc.length} · Seite ${currentPage + 1}/${totalPages}</span>
+      <button onclick="setVersionPage('${project.id}', ${currentPage + 1})"
+        ${currentPage >= totalPages - 1 ? 'disabled' : ''}
+        style="background:${currentPage >= totalPages - 1 ? 'transparent' : 'var(--surface3)'};border:1px solid var(--border2);color:${currentPage >= totalPages - 1 ? 'var(--text3)' : 'var(--text)'};border-radius:6px;padding:4px 10px;font-size:11px;font-family:var(--mono);cursor:${currentPage >= totalPages - 1 ? 'not-allowed' : 'pointer'};opacity:${currentPage >= totalPages - 1 ? '0.4' : '1'};">Älter →</button>
+    </div>`;
+  }
+
+  return itemsHtml + paginationHtml;
 }
 
 // ── FILE HANDLING ─────────────────────────────────────────────────────────
@@ -2903,6 +2943,8 @@ async function deploy() {
     const fn = document.getElementById('fileName');
     if (fn) fn.textContent = '';
     renderProjectList();
+    // Pagination zurück auf Seite 1 (neueste Version)
+    versionPageState[project.id] = 0;
     // Refresh versions section
     const versBox = document.querySelector('.versions-box');
     if (versBox) versBox.innerHTML = `<div class="versions-header">// Versionsarchiv (${project.versions.length})</div>${renderVersionHistory(project)}`;
